@@ -20,6 +20,7 @@
 
 void Game_Init(void)
 {
+	//test
 }
 
 
