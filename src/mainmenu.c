@@ -20,7 +20,7 @@
 void Main_Menu_Init(void)
 {
 	CP_Font globalfont;
-	globalfont = CP_Font_Load("C:/Users/User/Documents/GitHub/Jungle/Assets/Dalek.ttf");
+	globalfont = CP_Font_Load("./Assets/Dalek.ttf");
 	CP_Settings_TextSize(67);
 	CP_Settings_TextAlignment(CP_TEXT_ALIGN_H_CENTER, CP_TEXT_ALIGN_V_MIDDLE);
 	CP_Graphics_ClearBackground(CP_Color_Create(80, 80, 80, 255));
