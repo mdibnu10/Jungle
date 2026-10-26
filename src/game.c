@@ -190,6 +190,9 @@ void Game_Update(void)
 	if (VDP_dist <= 300) {
 		dummy.chase = 1;
 	}
+	else {
+		dummy.chase = 0;
+	}
 	if (dummy.chase == 1) {
 		dummy.x += (NVDP_X * 200.0f) * dt;
 		dummy.y += (NVDP_Y * 200.0f) * dt;
