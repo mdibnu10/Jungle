@@ -17,6 +17,13 @@
 
 CP_Font globalfont;
 CP_Image bg;
+int random;
+const char* maps[] = { "./Assets/A.png", "./Assets/B.png", "./Assets/C.png" };
+
+void randomize(void)
+{
+	random = rand() % 3;
+}
 
 void Main_Menu_Init(void)
 {
@@ -59,6 +66,7 @@ void Main_Menu_Update(void)
 	CP_Font_DrawText("EXIT", area_center_x, exit_height); // exit text
 
 	if (IsAreaClicked(area_center_x, play_height, area_width, area_height, click_x, click_y)) { // if play is clicked
+		randomize();
 		CP_Engine_SetNextGameState(Game_Init, Game_Update, Game_Exit);
 	}
 
