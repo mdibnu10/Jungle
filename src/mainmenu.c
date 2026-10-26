@@ -23,7 +23,7 @@ void Main_Menu_Init(void)
 	globalfont = CP_Font_Load("./Assets/Dalek.ttf");
 	CP_Settings_TextAlignment(CP_TEXT_ALIGN_H_CENTER, CP_TEXT_ALIGN_V_MIDDLE);
 	CP_Graphics_ClearBackground(CP_Color_Create(80, 80, 80, 255));
-	bg = CP_Image_Load("./Assets/bg.png");
+	bg = CP_Image_Load("./Assets/newbg.png");
 	CP_Settings_ImageMode(CP_POSITION_CORNER);
 	CP_Settings_ImageWrapMode(CP_IMAGE_WRAP_CLAMP);
 	CP_System_SetWindowSize(CP_Image_GetWidth(bg), CP_Image_GetHeight(bg));
@@ -34,13 +34,13 @@ void Main_Menu_Update(void)
 	float click_x = CP_Input_GetMouseX();
 	float click_y = CP_Input_GetMouseY();
 
-	float area_center_x = 804.25f;
-	float play_height = 408.0f;
-	float cred_height = 575.0f;
-	float exit_height = 745.0f;
+	float area_center_x = 800.0f;
+	float play_height = 505.0f;
+	float cred_height = 648.0;
+	float exit_height = 790.0f;
 
-	float area_width = 378.0f;
-	float area_height = 143.0f;
+	float area_width = 230.0f;
+	float area_height = 100.0f;
 
 	CP_Image_Draw(bg, 0.0f, 0.0f, 1600, 900, 255);
 
@@ -52,7 +52,7 @@ void Main_Menu_Update(void)
 
 	CP_Settings_Fill(CP_Color_Create(0, 0, 0, 255)); // setting font color
 	CP_Settings_TextSize(70);
-	CP_Font_DrawText("JUNGLE GAME", area_center_x, 175); // title
+	CP_Font_DrawText("MOTHER NATURE", area_center_x, 240); // title
 	CP_Settings_TextSize(50);
 	CP_Font_DrawText("PLAY", area_center_x, play_height); // play text
 	CP_Font_DrawText("CREDITS", area_center_x, cred_height); // credits text
