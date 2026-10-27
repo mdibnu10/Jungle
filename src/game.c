@@ -25,6 +25,15 @@ CP_Image second;
 CP_Image rock;
 CP_Sound sound;
 
+CP_Image run;
+CP_Image att;
+CP_Image idle;
+float test_x;
+float test_y;
+int att_frame;
+int attking;
+
+
 float player_x;
 float player_y;
 int facing_right;
@@ -35,15 +44,16 @@ int stone;
 int waterFrame;
 float animation_timer;
 float waterTimer;
-
+float slashtimer;
 
 void Game_Init(void)
 {
+    random = 1;
 	bg = CP_Image_Load(maps[random]);
     if (random == 1)
     {
-        sound = CP_Sound_Load("Assets/sound.wav");
-        CP_Sound_Play(sound);
+        //sound = CP_Sound_Load("Assets/sound.wav");
+        //CP_Sound_Play(sound);
     }
     if (random == 2)
     {
@@ -54,6 +64,10 @@ void Game_Init(void)
     dead_sprite = CP_Image_Load("Assets/Death-Sheet.png");
     rock = CP_Image_Load("Assets/Rocks.png");
 
+    run = CP_Image_Load("Assets/_Run.png");
+    att = CP_Image_Load("Assets/_AttackCombo.png");
+    idle = CP_Image_Load("Assets/_Idle.png");
+
     player_x = 800.0f;
     player_y = 300.0f;
     was_moving = 0;
@@ -61,6 +75,11 @@ void Game_Init(void)
     run_frame = 0;
     waterTimer = 0;
     waterFrame = 0;
+    slashtimer = 0;
+
+    att_frame = 0;
+    test_x = 800.0f;
+    test_y = 450.0f;
 
 }
 
@@ -72,7 +91,92 @@ void Game_Update(void)
     // if second map is chosen execute this
     if (random == 1)
     {
-        CP_Image_Draw(bg, 200.0f, 0.0f, 1181, 900, 255);
+
+        CP_Image_Draw(bg, 0.0f, 0.0f, 1600, 900, 255);
+        int moving = 0;
+
+        slashtimer += CP_System_GetDt();
+        animation_timer += CP_System_GetDt();
+        if (animation_timer >= 0.12f)
+        {
+            run_frame = (run_frame + 1) % 10;
+            
+            idle_frame = (idle_frame + 1) % 10;
+            animation_timer = 0;
+        }
+        if (CP_Input_KeyDown(KEY_W))
+        {
+            test_y -= 3.0f;
+            moving = 1;
+        }
+
+        if (CP_Input_KeyDown(KEY_S))
+        {
+            test_y += 3.0f;
+            moving = 1;
+        }
+
+        if (CP_Input_KeyDown(KEY_A))
+        {
+            test_x -= 3.0f;
+            moving = 1;
+
+        }
+
+        if (CP_Input_KeyDown(KEY_D))
+        {
+            test_x += 3.0f;
+            moving = 1;
+
+        }
+        if (CP_Input_MouseClicked())
+        {
+            attking = 1;     
+        }
+        if (attking == 1)
+        {
+            CP_Image_DrawSubImage(
+                att,
+                test_x, test_y,
+                160, 120,
+                att_frame * 120, 0,
+                (att_frame + 1) * 120, 80,
+                255);
+            if (slashtimer >= 0.10f)
+            {
+                att_frame = (att_frame + 1) % 10;
+                slashtimer = 0;
+                if (att_frame == 9)
+                    attking = 0;
+            }
+            
+        }  
+        else
+        {
+            if (moving == 1)
+            {
+
+                CP_Image_DrawSubImage(
+                    run,
+                    test_x, test_y,
+                    160, 120,
+                    run_frame * 120, 0,
+                    (run_frame + 1) * 120, 80,
+                    255
+                );
+            }
+            else
+            {
+                CP_Image_DrawSubImage(
+                    idle,
+                    test_x, test_y,
+                    160, 120,
+                    idle_frame * 120, 0,
+                    (idle_frame + 1) * 120, 80,
+                    255
+                );
+            }
+        }
     }
 
     // if third map is chosen execute this
@@ -204,7 +308,7 @@ void Game_Update(void)
 }
 void Game_Exit(void)
 {
-    CP_Sound_Free(sound);
+    
     CP_Image_Free(bg);
     CP_Image_Free(rock);
     CP_Image_Free(dead_sprite);

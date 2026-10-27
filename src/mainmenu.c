@@ -18,7 +18,7 @@
 CP_Font globalfont;
 CP_Image bg;
 int random;
-const char* maps[] = { "./Assets/A.png", "./Assets/B.png", "./Assets/C.png" };
+const char* maps[] = { "./Assets/A.png", "./Assets/firstsmap.png", "./Assets/C.png" };
 
 void randomize(void)
 {
