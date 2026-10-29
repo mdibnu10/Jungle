@@ -76,6 +76,7 @@ void Game_Init(void)
     waterTimer = 0;
     waterFrame = 0;
     slashtimer = 0;
+    
 
     att_frame = 0;
     test_x = 800.0f;
@@ -91,9 +92,11 @@ void Game_Update(void)
     // if second map is chosen execute this
     if (random == 1)
     {
-
+        CP_Settings_ImageMode(CP_POSITION_CORNER);
         CP_Image_Draw(bg, 0.0f, 0.0f, 1600, 900, 255);
+        CP_Settings_ImageMode(CP_POSITION_CENTER);
         int moving = 0;
+ 
 
         slashtimer += CP_System_GetDt();
         animation_timer += CP_System_GetDt();
@@ -120,6 +123,7 @@ void Game_Update(void)
         {
             test_x -= 3.0f;
             moving = 1;
+            facing_right = 0;
 
         }
 
@@ -127,6 +131,7 @@ void Game_Update(void)
         {
             test_x += 3.0f;
             moving = 1;
+            facing_right = 1;
 
         }
         if (CP_Input_MouseClicked())
@@ -135,10 +140,11 @@ void Game_Update(void)
         }
         if (attking == 1)
         {
+            float draw_width = facing_right ? 160.0f : -160.0f;
             CP_Image_DrawSubImage(
                 att,
                 test_x, test_y,
-                160, 120,
+                draw_width, 120,
                 att_frame * 120, 0,
                 (att_frame + 1) * 120, 80,
                 255);
@@ -155,11 +161,11 @@ void Game_Update(void)
         {
             if (moving == 1)
             {
-
+                float draw_width = facing_right ? 160.0f : -160.0f;
                 CP_Image_DrawSubImage(
                     run,
                     test_x, test_y,
-                    160, 120,
+                    draw_width, 120,
                     run_frame * 120, 0,
                     (run_frame + 1) * 120, 80,
                     255
@@ -167,10 +173,11 @@ void Game_Update(void)
             }
             else
             {
+                float draw_width = facing_right ? 160.0f : -160.0f;
                 CP_Image_DrawSubImage(
                     idle,
                     test_x, test_y,
-                    160, 120,
+                    draw_width, 120,
                     idle_frame * 120, 0,
                     (idle_frame + 1) * 120, 80,
                     255
