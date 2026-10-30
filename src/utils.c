@@ -32,3 +32,9 @@ int IsAreaClicked(float area_center_x, float area_center_y, float area_width, fl
 		return 0;
 	}
 }
+
+float findQ(float value, float min, float max) {
+	if (value < min) return min;
+	if (value > max) return max;
+	return value;
+}
