@@ -17,12 +17,24 @@
 
 CP_Font globalfont;
 CP_Image bg;
-int random;
-const char* maps[] = { "./Assets/A.png", "./Assets/firstsmap.png", "./Assets/C.png" };
+MapData maps[LEVELS][MAPS_PER_LEVEL] =
+{
+	// Level 1: real maps
+	{ {"./Assets/A.png"}, {"./Assets/B.png"}, {"./Assets/C.png"} },
+
+	// Level 2: reuse lvl1 images for now as placeholders
+	{ {"./Assets/A.png"}, {"./Assets/B.png"}, {"./Assets/C.png"} },
+
+	// Level 3: same placeholders
+	{ {"./Assets/A.png"}, {"./Assets/B.png"}, {"./Assets/C.png"} },
+};
+int random[LEVELS];
+int current_level = 0;
 
 void randomize(void)
 {
-	random = rand() % 3;
+	for (int i = 0; i < LEVELS; i++)
+		random[i] = rand() % MAPS_PER_LEVEL;
 }
 
 void Main_Menu_Init(void)
