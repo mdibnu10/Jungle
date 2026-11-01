@@ -33,6 +33,7 @@ int IsAreaClicked(float area_center_x, float area_center_y, float area_width, fl
 	}
 }
 
+//<<<<<<< HEAD
 void Anim_Init(Animation* a, const char* path, int fw, int fh, float frame_time, int loop)
 {
 	a->img = CP_Image_Load(path);
@@ -73,4 +74,11 @@ void Anim_Draw(const Animation* a, float x, float y, float w, float h)
 	CP_Image_DrawSubImage(a->img, x, y, w, h,
 		(float)(a->frame * a->img_w), 0,
 		(float)((a->frame + 1) * a->img_w), (float)a->img_h, 255);
+}
+//=======
+float findQ(float value, float min, float max) {
+	if (value < min) return min;
+	if (value > max) return max;
+	return value;
+//>>>>>>> main
 }

@@ -10,6 +10,8 @@
 //---------------------------------------------------------
 #define LEVELS 3
 #define MAPS_PER_LEVEL 3
+#define MAX_OBSTACLE 3
+#define MAX_BULLETS 5
 
 void Game_Init(void);
 
@@ -23,6 +25,25 @@ typedef struct MapData
     CP_Image image;        
   
 } MapData;
+
+typedef struct {
+	float x;
+	float y;
+	int state; // 0 inactive, 1 active
+	float size;
+	float angle;
+	float speed_x;
+	float speed_y;
+} Bullet;
+
+
+typedef struct {
+	float x;
+	float y;
+	float width;
+	float height;
+} Obstacle;
+
 
 extern int random[LEVELS];
 extern int current_level;
