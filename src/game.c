@@ -48,19 +48,26 @@ float hitTimer = 0.0f;
 int ClickedSlot = 1;
 int Paused = 0;
 int GameMode = 0; //0 = Time-Based, 1 = Kill-Based
+//---------------------------------------------------------
+float ObsminX, ObsmaxX, ObsminY, ObsmaxY;
+float KnightminX, KnightmaxX, KnightminY, KnightmaxY;
+float DummmyminX, DummymaxX, DummyminY, DummymaxY;
+float overlapX, overlapY;
 
 void Game_Init(void)
 {
     knight.x = 800.0f;
     knight.y = 450.0f;
-    knight.speed = 250.0f;
+    knight.speed = 200.0f;
     knight.state = IDLE;
 	knight.size = 50.0f;
+	knight.width = 50;
+	knight.height = 60;
 
 	dummy.x = random_range(100, 1500);
 	dummy.y = random_range(100, 600);
 	dummy.width = 60;
-	dummy.height = 80;
+	dummy.height = 40;
 	dummy.counter = 10;
 	dummy.chase = 0;
 
@@ -147,7 +154,8 @@ void Game_Update(void)
     CP_Settings_ImageMode(CP_POSITION_CORNER);
     CP_Image_Draw(bg, 0, 0, windowLength, windowHeight, 255);
     float dt = CP_System_GetDt();
-	float half_size = knight.size / 2.0f;
+	float half_width = knight.width / 2.0f;
+	float half_height = knight.height / 2.0f;
     int moving = 0;
 	//---------------------------------------------------------
 	//Darrel
@@ -162,6 +170,7 @@ void Game_Update(void)
 			GAMEOVER = 1; // time's up
 		}
 	}
+	//---------------------------------------------------------
     // Player's Control
 	if (GAMEOVER != 1 && Paused == 0) {
 		if (CP_Input_KeyDown(KEY_W))
@@ -188,14 +197,17 @@ void Game_Update(void)
 			moving = 1;
 		}
 	}
-
+	//---------------------------------------------------------------------
+	CP_Graphics_DrawRect(knight.x, knight.y, knight.width, knight.height);
+	CP_Graphics_DrawRect(dummy.x, dummy.y, dummy.width, dummy.height);
+	//---------------------------------------------------------------------
     // decide the state (can't change state mid-attack)
     if (knight.state != ATTACK)
     {
-        if (CP_Input_MouseTriggered(MOUSE_BUTTON_LEFT))
+        if (CP_Input_MouseTriggered(MOUSE_BUTTON_LEFT) && Paused != 1)
         {
-            knight.state = ATTACK;
-            Anim_Reset(&knight.attack);
+			knight.state = ATTACK;
+			Anim_Reset(&knight.attack);
         }
         else
         {
@@ -210,11 +222,11 @@ void Game_Update(void)
     {
     case IDLE:
         Anim_Update(&knight.idle, dt);
-        Anim_Draw(&knight.idle, knight.x, knight.y - half_size, draw_width, 120);
+        Anim_Draw(&knight.idle, knight.x, knight.y - knight.height / 2.0f, draw_width, 120);
         break;
     case RUN:
         Anim_Update(&knight.run, dt);
-        Anim_Draw(&knight.run, knight.x, knight.y - half_size, draw_width, 120);
+        Anim_Draw(&knight.run, knight.x, knight.y - knight.height / 2.0f, draw_width, 120);
         break;
     case ATTACK:
         if (Anim_Update(&knight.attack, dt))
@@ -229,7 +241,7 @@ void Game_Update(void)
 	float mouseX = CP_Input_GetMouseX();
 	float mouseY = CP_Input_GetMouseY();
 
-	if (CP_Input_MouseClicked()) {
+	if (CP_Input_MouseClicked() && Paused == 0 && !IsAreaClicked(50, 50, 50, 50, CP_Input_GetMouseX(), CP_Input_GetMouseY())) {
 		for (int i = 0; i < MAX_BULLETS; i++) {
 			if (bullets[i].state == 0) {
 				// Find the Vector between Player and Mouse
@@ -240,7 +252,6 @@ void Game_Update(void)
 				// Normalize the Vector
 				Norm_X = Vec_X / dist;
 				Norm_Y = Vec_Y / dist;
-
 				// Bullet comes from knight xy coords
 				bullets[i].x = knight.x;
 				bullets[i].y = knight.y;
@@ -256,7 +267,7 @@ void Game_Update(void)
 		}
 	}
 	for (int i = 0; i < MAX_BULLETS; i++) {
-		if (bullets[i].state == 1) {
+		if (bullets[i].state == 1 && Paused != 1) {
 			bullets[i].x += bullets[i].speed_x * dt;
 			bullets[i].y += bullets[i].speed_y * dt;
 			// Window Size Reference (1600, 900);
@@ -288,49 +299,76 @@ void Game_Update(void)
 	/*------------------------------------------------------------------------------*/
 	// get coordinates of top, bottom, left, right
 
-	if (knight.x - half_size < 0) {
-		knight.x = half_size;
+	if (knight.x - half_width < 0) {
+		knight.x = half_width;
 	}
-	if (knight.x + half_size > windowLength) {
-		knight.x = windowLength - half_size;
+	if (knight.x + half_width > windowLength) {
+		knight.x = windowLength - half_width;
 	}
-	if (knight.y - half_size < 0) {
-		knight.y = half_size;
+	if (knight.y - half_height < 0) {
+		knight.y = half_height;
 	}
-	if (knight.y + half_size > windowHeight) {
-		knight.y = windowHeight - half_size;
+	if (knight.y + half_height > windowHeight) {
+		knight.y = windowHeight - half_height;
 	}
 	//AABB INTERSECTION !!!!
-	// For Player
+	// For Knight
 	for (int i = 0; i < MAX_OBSTACLE; i++) {
-		//Calculate the min and max for x and y coordinates
-		float minX = obstacle[i].x - obstacle[i].width / 2.0f;
-		float maxX = obstacle[i].x + obstacle[i].width / 2.0f;
-		float minY = obstacle[i].y - obstacle[i].height / 2.0f;
-		float maxY = obstacle[i].y + obstacle[i].height / 2.0f;
-		//Determine point Q in AABB where that is closest to the sphere
-		float Qx = findQ(knight.x, minX, maxX);
-		float Qy = findQ(knight.y, minY, maxY);
-		//Calculating the squared distance of Q - Player center
-		float VQC_X = knight.x - Qx;
-		float VQC_Y = knight.y - Qy;
-		float distSq = (VQC_X * VQC_X) + (VQC_Y * VQC_Y);
-		//Determined colision occurs whehter radius squared is more than distance squared
-		float rSq = half_size * half_size;
-		if (distSq < rSq) {
-			float distance = sqrtf(distSq);
-			if (distance == 0.0f) distance = 0.001f;
-			float nV_X = VQC_X / distance;
-			float nV_Y = VQC_Y / distance;
-			//Calculate the distance the player is clipping through
-			float collision = half_size - distance;
-			//Applies the positional update on circle position outside of rectangle
-			knight.x += nV_X * collision;
-			knight.y += nV_Y * collision;
+		// Setting up boundary for Obstacle
+		ObsminX = obstacle[i].x - obstacle[i].width / 2.0f;
+		ObsmaxX = obstacle[i].x + obstacle[i].width / 2.0f;
+		ObsminY = obstacle[i].y - obstacle[i].height / 2.0f;
+		ObsmaxY = obstacle[i].y + obstacle[i].height / 2.0f;
+		// Setting up boundary for Knight
+		KnightminX = knight.x - knight.width / 2.0f;
+		KnightmaxX = knight.x + knight.width / 2.0f;
+		KnightminY = knight.y - knight.height / 2.0f;
+		KnightmaxY = knight.y + knight.height / 2.0f;
+		// If knight currently outside boundary of Obstacle, continue with the rest of the code
+		if (KnightmaxX <= ObsminX || KnightminX >= ObsmaxX ||
+			KnightmaxY <= ObsminY || KnightminY >= ObsmaxY) {
+			continue;
+		}
+		// Calculate the XY Overlap
+		overlapX = (knight.x < obstacle[i].x) ? (KnightmaxX - ObsminX) : (ObsmaxX - KnightminX);
+		overlapY = (knight.y < obstacle[i].y) ? (KnightmaxY - ObsminY) : (ObsmaxY - KnightminY);
+
+		if (overlapX < overlapY) {
+			knight.x = (knight.x < obstacle[i].x) ? (knight.x -= overlapX) : (knight.x += overlapX);
+		}
+		else {
+			knight.y = (knight.y < obstacle[i].y) ? (knight.y -= overlapY) : (knight.y += overlapY);
 		}
 	}
+	/*------------------------------------------------------------------------------*/
 	//For dummy
+	for (int i = 0; i < MAX_OBSTACLE; i++) {
+		// Setting up boundary for Obstacle
+		ObsminX = obstacle[i].x - obstacle[i].width / 2.0f;
+		ObsmaxX = obstacle[i].x + obstacle[i].width / 2.0f;
+		ObsminY = obstacle[i].y - obstacle[i].height / 2.0f;
+		ObsmaxY = obstacle[i].y + obstacle[i].height / 2.0f;
+		// Setting up boundary for dummy
+		DummmyminX = dummy.x - dummy.width / 2.0f;
+		DummymaxX = dummy.x + dummy.width / 2.0f;
+		DummyminY = dummy.y - dummy.height / 2.0f;
+		DummymaxY = dummy.y + dummy.height / 2.0f;
+		// If knight currently outside boundary of Obstacle, continue with the rest of the code
+		if (DummymaxX <= ObsminX || DummmyminX >= ObsmaxX ||
+			DummymaxY <= ObsminY || DummyminY >= ObsmaxY) {
+			continue;
+		}
+		// Calculate the XY Overlap
+		overlapX = (dummy.x < obstacle[i].x) ? (DummymaxX - ObsminX) : (ObsmaxX - DummmyminX);
+		overlapY = (dummy.y < obstacle[i].y) ? (DummymaxY - ObsminY) : (ObsmaxY - DummyminY);
 
+		if (overlapX < overlapY) {
+			dummy.x = (dummy.x < obstacle[i].x) ? (dummy.x -= overlapX) : (dummy.x += overlapX);
+		}
+		else {
+			dummy.y = (dummy.y < obstacle[i].y) ? (dummy.y -= overlapY) : (dummy.y += overlapY);
+		}
+	}
 	/*------------------------------------------------------------------------------*/
 	if (dummy.counter != 0) {
 		VDP_X = knight.x - dummy.x;
@@ -342,7 +380,7 @@ void Game_Update(void)
 		NVDP_X = VDP_X / VDP_dist;
 		NVDP_Y = VDP_Y / VDP_dist;
 	}
-	if (VDP_dist <= 300 && dummy.counter != 0) {
+	if (VDP_dist <= 300 && dummy.counter != 0 && Paused != 1) {
 		dummy.chase = 1;
 	}
 	else {
@@ -363,7 +401,7 @@ void Game_Update(void)
 		{
 		case IDLE:
 			Anim_Update(&dummy.idle, dt);
-			Anim_Draw(&dummy.idle, dummy.x, dummy.y, draw_width, 80);
+			Anim_Draw(&dummy.idle, dummy.x, dummy.y - dummy.height / 2.0f, draw_width, 80);
 			break;
 		case RUN:
 			Anim_Update(&dummy.run, dt);
@@ -405,11 +443,9 @@ void Game_Update(void)
 		// Handle collision
 		HPBARHEALTH -= 0.10f;
 		hitTimer = 0.15f;
-
 		if (HPBARHEALTH < 0) {
 			HPBARHEALTH = 0;
 		}
-
 	}
 
 	//If Player and SpeedBoost collide, gain a speed boost for 5 seconds.
@@ -427,7 +463,6 @@ void Game_Update(void)
 	CP_Settings_Fill(CP_Color_Create(0, 70, 0, 255));
 	CP_Settings_RectMode(CP_POSITION_CORNER);
 	CP_Graphics_DrawRect(knight.x - (knight.size / 2.0f), knight.y + (knight.size / 2.0f + 10.0f), HPBARHEALTH, 10.0f);
-
 
 	//Draw Speed-Boost Power Up Bar
 	if (speedboost.collected == 0) {
@@ -518,7 +553,6 @@ void Game_Update(void)
 	}
 	else if (GameMode == 1) {
 		// Kill-Based Game Mode Code
-
 		snprintf(killcount.text, sizeof(killcount.text), "%02d / %02d", killcount.amount, killcount.total);
 
 		CP_Settings_RectMode(CP_POSITION_CENTER);

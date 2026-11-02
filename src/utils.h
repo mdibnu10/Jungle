@@ -31,6 +31,8 @@ typedef struct Player
 	float x, y;
 	float speed;
 	float size;
+	float width;
+	float height;
 	int is_right;
 	PlayerState state;
 	Animation idle, run, attack;
