@@ -60,7 +60,6 @@ void Game_Init(void)
     knight.y = 450.0f;
     knight.speed = 200.0f;
     knight.state = IDLE;
-	knight.size = 50.0f;
 	knight.width = 50;
 	knight.height = 60;
 
@@ -125,7 +124,7 @@ void Game_Init(void)
 	//Pause Mode
 	Paused = 0;
 
-	HPBARHEALTH = knight.size;
+	HPBARHEALTH = knight.width;
 	randomX = random_range(100, CP_System_GetDisplayWidth() - 110);
 	randomY = random_range(100, CP_System_GetDisplayHeight() - 110);
 
@@ -198,8 +197,9 @@ void Game_Update(void)
 		}
 	}
 	//---------------------------------------------------------------------
-	CP_Graphics_DrawRect(knight.x, knight.y, knight.width, knight.height);
-	CP_Graphics_DrawRect(dummy.x, dummy.y, dummy.width, dummy.height);
+	//For testing purposes
+	//CP_Graphics_DrawRect(knight.x, knight.y, knight.width, knight.height);
+	//CP_Graphics_DrawRect(dummy.x, dummy.y, dummy.width, dummy.height);
 	//---------------------------------------------------------------------
     // decide the state (can't change state mid-attack)
     if (knight.state != ATTACK)
@@ -314,59 +314,25 @@ void Game_Update(void)
 	//AABB INTERSECTION !!!!
 	// For Knight
 	for (int i = 0; i < MAX_OBSTACLE; i++) {
-		// Setting up boundary for Obstacle
-		ObsminX = obstacle[i].x - obstacle[i].width / 2.0f;
-		ObsmaxX = obstacle[i].x + obstacle[i].width / 2.0f;
-		ObsminY = obstacle[i].y - obstacle[i].height / 2.0f;
-		ObsmaxY = obstacle[i].y + obstacle[i].height / 2.0f;
-		// Setting up boundary for Knight
-		KnightminX = knight.x - knight.width / 2.0f;
-		KnightmaxX = knight.x + knight.width / 2.0f;
-		KnightminY = knight.y - knight.height / 2.0f;
-		KnightmaxY = knight.y + knight.height / 2.0f;
-		// If knight currently outside boundary of Obstacle, continue with the rest of the code
-		if (KnightmaxX <= ObsminX || KnightminX >= ObsmaxX ||
-			KnightmaxY <= ObsminY || KnightminY >= ObsmaxY) {
-			continue;
-		}
-		// Calculate the XY Overlap
-		overlapX = (knight.x < obstacle[i].x) ? (KnightmaxX - ObsminX) : (ObsmaxX - KnightminX);
-		overlapY = (knight.y < obstacle[i].y) ? (KnightmaxY - ObsminY) : (ObsmaxY - KnightminY);
-
-		if (overlapX < overlapY) {
-			knight.x = (knight.x < obstacle[i].x) ? (knight.x -= overlapX) : (knight.x += overlapX);
-		}
-		else {
-			knight.y = (knight.y < obstacle[i].y) ? (knight.y -= overlapY) : (knight.y += overlapY);
+		if (IsSquareColliding(obstacle[i].x, obstacle[i].y, obstacle[i].width, obstacle[i].height, knight.x, knight.y, knight.width, knight.height, &overlapX, &overlapY)) {
+			if (overlapX < overlapY) {
+				knight.x = (knight.x < obstacle[i].x) ? (knight.x -= overlapX) : (knight.x += overlapX);
+			}
+			else {
+				knight.y = (knight.y < obstacle[i].y) ? (knight.y -= overlapY) : (knight.y += overlapY);
+			}
 		}
 	}
 	/*------------------------------------------------------------------------------*/
 	//For dummy
 	for (int i = 0; i < MAX_OBSTACLE; i++) {
-		// Setting up boundary for Obstacle
-		ObsminX = obstacle[i].x - obstacle[i].width / 2.0f;
-		ObsmaxX = obstacle[i].x + obstacle[i].width / 2.0f;
-		ObsminY = obstacle[i].y - obstacle[i].height / 2.0f;
-		ObsmaxY = obstacle[i].y + obstacle[i].height / 2.0f;
-		// Setting up boundary for dummy
-		DummmyminX = dummy.x - dummy.width / 2.0f;
-		DummymaxX = dummy.x + dummy.width / 2.0f;
-		DummyminY = dummy.y - dummy.height / 2.0f;
-		DummymaxY = dummy.y + dummy.height / 2.0f;
-		// If knight currently outside boundary of Obstacle, continue with the rest of the code
-		if (DummymaxX <= ObsminX || DummmyminX >= ObsmaxX ||
-			DummymaxY <= ObsminY || DummyminY >= ObsmaxY) {
-			continue;
-		}
-		// Calculate the XY Overlap
-		overlapX = (dummy.x < obstacle[i].x) ? (DummymaxX - ObsminX) : (ObsmaxX - DummmyminX);
-		overlapY = (dummy.y < obstacle[i].y) ? (DummymaxY - ObsminY) : (ObsmaxY - DummyminY);
-
-		if (overlapX < overlapY) {
-			dummy.x = (dummy.x < obstacle[i].x) ? (dummy.x -= overlapX) : (dummy.x += overlapX);
-		}
-		else {
-			dummy.y = (dummy.y < obstacle[i].y) ? (dummy.y -= overlapY) : (dummy.y += overlapY);
+		if (IsSquareColliding(obstacle[i].x, obstacle[i].y, obstacle[i].width, obstacle[i].height, dummy.x, dummy.y, dummy.width, dummy.height, &overlapX, &overlapY)) {
+			if (overlapX < overlapY) {
+				dummy.x = (dummy.x < obstacle[i].x) ? (dummy.x -= overlapX) : (dummy.x += overlapX);
+			}
+			else {
+				dummy.y = (dummy.y < obstacle[i].y) ? (dummy.y -= overlapY) : (dummy.y += overlapY);
+			}
 		}
 	}
 	/*------------------------------------------------------------------------------*/
@@ -438,8 +404,8 @@ void Game_Update(void)
 		}
 	}
 	//If Player and Dummt collide, lose a life and reset player position.
-	if (IsSquareCircleColliding(dummy.x, dummy.y, dummy.width, dummy.height, knight.x, knight.y, knight.size / 2.0f) && dummy.counter != 0 && Paused == 0)
-	{
+	//if (IsSquareCircleColliding(dummy.x, dummy.y, dummy.width, dummy.height, knight.x, knight.y, knight.size / 2.0f) && dummy.counter != 0 && Paused == 0)
+	if (IsSquareColliding2(dummy.x, dummy.y, dummy.width, dummy.height,knight.x, knight.y, knight.width, knight.height) && dummy.counter != 0 && Paused == 0) {
 		// Handle collision
 		HPBARHEALTH -= 0.10f;
 		hitTimer = 0.15f;
@@ -447,10 +413,9 @@ void Game_Update(void)
 			HPBARHEALTH = 0;
 		}
 	}
-
 	//If Player and SpeedBoost collide, gain a speed boost for 5 seconds.
 	if (speedboost.collected != 1) {
-		if (IsSquareCircleColliding(randomX, randomY, speedboost.width, speedboost.height, knight.x, knight.y, knight.size / 2.0f))
+		if (IsSquareColliding2(randomX, randomY, speedboost.width, speedboost.height, knight.x, knight.y, knight.width, knight.height))
 		{
 			knight.speed += 10.0f;
 			speedboost.collected = 1;
@@ -462,7 +427,7 @@ void Game_Update(void)
 	//Disappears when SpeedBoost is collected.
 	CP_Settings_Fill(CP_Color_Create(0, 70, 0, 255));
 	CP_Settings_RectMode(CP_POSITION_CORNER);
-	CP_Graphics_DrawRect(knight.x - (knight.size / 2.0f), knight.y + (knight.size / 2.0f + 10.0f), HPBARHEALTH, 10.0f);
+	CP_Graphics_DrawRect(knight.x - (knight.width / 2.0f), knight.y + (knight.height / 2.0f + 10.0f), HPBARHEALTH, 10.0f);
 
 	//Draw Speed-Boost Power Up Bar
 	if (speedboost.collected == 0) {
@@ -499,7 +464,7 @@ void Game_Update(void)
 			lives--;
 			knight.x = windowLength / 2.0f;
 			knight.y = windowHeight / 2.0f;
-			HPBARHEALTH = knight.size;
+			HPBARHEALTH = knight.width;
 		}
 	}
 	//Draw the pause button in the top right corner of the screen.

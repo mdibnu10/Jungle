@@ -85,21 +85,62 @@ float findQ(float value, float min, float max) {
 //---------------------------------------------------------
 //Darrel
 //---------------------------------------------------------
-int IsSquareCircleColliding(float square_center_x, float square_center_y, float square_width, float square_height, float circle_center_x, float circle_center_y, float circle_radius)
-{
-	if (
-		fabs(circle_center_x - square_center_x) <= (square_width / 2 + circle_radius) &&
-		fabs(circle_center_y - square_center_y) <= (square_height / 2 + circle_radius)
-		)
-	{
-		return 1;
-	}
-	else
-	{
+//int IsSquareCircleColliding(float square_center_x, float square_center_y, float square_width, float square_height, float circle_center_x, float circle_center_y, float circle_radius)
+//{
+//	if (
+//		fabs(circle_center_x - square_center_x) <= (square_width / 2 + circle_radius) &&
+//		fabs(circle_center_y - square_center_y) <= (square_height / 2 + circle_radius)
+//		)
+//	{
+//		return 1;
+//	}
+//	else
+//	{
+//		return 0;
+//	}
+//}
+
+int IsSquareColliding(float sq1x, float sq1y, float sq1w, float sq1h, float sq2x, float sq2y, float sq2w, float sq2h, float *overlapX, float *overlapY) {
+	// Setting up boundary for Obstacle
+	float ObsminX = sq1x - sq1w / 2.0f;
+	float ObsmaxX = sq1x + sq1w / 2.0f;
+	float ObsminY = sq1y - sq1h / 2.0f;
+	float ObsmaxY = sq1y + sq1h / 2.0f;
+	// Setting up boundary for dummy
+	float DummmyminX = sq2x - sq2w / 2.0f;
+	float DummymaxX = sq2x + sq2w / 2.0f;
+	float DummyminY = sq2y - sq2h / 2.0f;
+	float DummymaxY = sq2y + sq2h / 2.0f;
+	// If knight currently outside boundary of Obstacle, continue with the rest of the code
+	if (DummymaxX <= ObsminX || DummmyminX >= ObsmaxX ||
+		DummymaxY <= ObsminY || DummyminY >= ObsmaxY) {
 		return 0;
 	}
+	// Calculate the XY Overlap
+	*overlapX = (sq2x < sq1x) ? (DummymaxX - ObsminX) : (ObsmaxX - DummmyminX);
+	*overlapY = (sq2y < sq1y) ? (DummymaxY - ObsminY) : (ObsmaxY - DummyminY);
+	
+	return 1;
 }
 
+int IsSquareColliding2(float sq1x, float sq1y, float sq1w, float sq1h, float sq2x, float sq2y, float sq2w, float sq2h) {
+	// Setting up boundary for Obstacle
+	float ObsminX = sq1x - sq1w / 2.0f;
+	float ObsmaxX = sq1x + sq1w / 2.0f;
+	float ObsminY = sq1y - sq1h / 2.0f;
+	float ObsmaxY = sq1y + sq1h / 2.0f;
+	// Setting up boundary for dummy
+	float DummmyminX = sq2x - sq2w / 2.0f;
+	float DummymaxX = sq2x + sq2w / 2.0f;
+	float DummyminY = sq2y - sq2h / 2.0f;
+	float DummymaxY = sq2y + sq2h / 2.0f;
+	// If knight currently outside boundary of Obstacle, continue with the rest of the code
+	if (DummymaxX <= ObsminX || DummmyminX >= ObsmaxX ||
+		DummymaxY <= ObsminY || DummyminY >= ObsmaxY) {
+		return 0;
+	}
+	return 1;
+}
 unsigned int random_range(unsigned int min, unsigned int max)
 {
 	return min + rand() % (max - min + 1);

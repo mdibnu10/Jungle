@@ -30,7 +30,6 @@ typedef struct Player
 {
 	float x, y;
 	float speed;
-	float size;
 	float width;
 	float height;
 	int is_right;
@@ -63,6 +62,8 @@ float findQ(float value, float min, float max);
 //---------------------------------------------------------
 //Darrel
 
-int IsSquareCircleColliding(float square_center_x, float square_center_y, float square_width, float square_height, float circle_center_x, float circle_center_y, float circle_radius);
+//int IsSquareCircleColliding(float square_center_x, float square_center_y, float square_width, float square_height, float circle_center_x, float circle_center_y, float circle_radius);
+int IsSquareColliding(float sq1x, float sq1y, float sq1w, float sq1h, float sq2x, float sq2y, float sq2w, float sq2h, float* overlapX, float* overlapY);
+int IsSquareColliding2(float sq1x, float sq1y, float sq1w, float sq1h, float sq2x, float sq2y, float sq2w, float sq2h);
 
 unsigned int random_range(unsigned int min, unsigned int max);
