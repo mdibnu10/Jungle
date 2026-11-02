@@ -17,6 +17,26 @@
 
 CP_Font globalfont;
 CP_Image bg;
+MapData maps[LEVELS][MAPS_PER_LEVEL] =
+{
+	// Level 1: real maps
+	{ {"./Assets/A.png"}, {"./Assets/B.png"}, {"./Assets/C.png"} },
+
+	// Level 2: reuse lvl1 images for now as placeholders
+	{ {"./Assets/A.png"}, {"./Assets/B.png"}, {"./Assets/C.png"} },
+
+	// Level 3: same placeholders
+	{ {"./Assets/A.png"}, {"./Assets/B.png"}, {"./Assets/C.png"} },
+};
+int random[LEVELS];
+int current_level = 0;
+
+// randomize map for each level
+void randomize(void)
+{
+	for (int i = 0; i < LEVELS; i++)
+		random[i] = rand() % MAPS_PER_LEVEL;
+}
 
 void Main_Menu_Init(void)
 {
@@ -59,6 +79,7 @@ void Main_Menu_Update(void)
 	CP_Font_DrawText("EXIT", area_center_x, exit_height); // exit text
 
 	if (IsAreaClicked(area_center_x, play_height, area_width, area_height, click_x, click_y)) { // if play is clicked
+		randomize();
 		CP_Engine_SetNextGameState(Game_Init, Game_Update, Game_Exit);
 	}
 
@@ -71,5 +92,5 @@ void Main_Menu_Update(void)
 
 void Main_Menu_Exit(void)
 {
-   
+	CP_Font_Free(&globalfont);
 }

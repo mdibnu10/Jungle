@@ -16,74 +16,60 @@
 #include <stdio.h>
 #include <math.h>
 
-typedef struct {
-	float x;
-	float y;
-	float speed;
-	float size;
-} Player;
+Player knight;
+CP_Image bg, arrow;
+Enemy dummy;
+float Vec_X, Vec_Y, dist, Norm_X, Norm_Y, VDP_X, VDP_Y, VDP_dist, NVDP_X, NVDP_Y;
 
-typedef struct {
-	float x;
-	float y;
-	float width;
-	float height;
-	int counter;
-	int chase;
-} Dummy;
-int move = 1;
-
-typedef struct {
-    float x;
-    float y;
-    int state; // 0 inactive, 1 active
-    float size;
-	float speed_x;
-	float speed_y;
-} Bullet;
-#define MAX_BULLETS 5
-
-typedef struct {
-	float x;
-	float y;
-	float width;
-	float height;
-} Obstacle;
-#define MAX_OBSTACLE 3
-
-Player player;
-Dummy dummy;
-Obstacle obstacle[3];
 Bullet bullets[MAX_BULLETS];
 char text[100];
 CP_Font font_menu = NULL;
 
-float Obs_X[MAX_OBSTACLE] = {400, 200, 1200};
-float Obs_Y[MAX_OBSTACLE] = {200, 700, 600};
-float Obs_W[MAX_OBSTACLE] = {30, 60, 90};
-float Obs_H[MAX_OBSTACLE] = {40, 80, 160};
+Obstacle obstacle[3];
+float Obs_X[MAX_OBSTACLE] = { 400, 200, 1200 };
+float Obs_Y[MAX_OBSTACLE] = { 200, 700, 600 };
+float Obs_W[MAX_OBSTACLE] = { 30, 60, 90 };
+float Obs_H[MAX_OBSTACLE] = { 40, 80, 160 };
 
 void Game_Init(void)
 {
-	font_menu = CP_Font_Load("./Assets/Exo2-Regular.ttf");
-	CP_Font_Set(font_menu); //set the font used
-	CP_Settings_TextSize(72); //set the font size
-	CP_Settings_RectMode(CP_POSITION_CENTER);
-	CP_Settings_EllipseMode(CP_POSITION_CENTER);
+    knight.x = 800.0f;
+    knight.y = 450.0f;
+    knight.speed = 250.0f;
+    knight.state = IDLE;
+	knight.size = 50.0f;
 
-	//Player spawn location & values
-	player.x = 800.0f;
-	player.y = 700.0f;
-	player.speed = 300.0f;
-	player.size = 75.0f;
-
-	// Dummy Values
 	dummy.x = 500;
 	dummy.y = 300;
 	dummy.width = 60;
 	dummy.height = 80;
 	dummy.counter = 10;
 	dummy.chase = 0;
+
+	VDP_X = 0.0f;
+	VDP_Y = 0.0f;
+	VDP_dist = 0.0f;
+	NVDP_X = 0.0f;
+	NVDP_Y = 0.0f;
+	Vec_X = 0.0f;
+	Vec_Y = 0.0f;
+	dist = 0.0f;
+	Norm_X = 0.0f;
+	Norm_Y = 0.0f;
+
+    bg = CP_Image_Load(maps[current_level][random[current_level]].image_path);
+	arrow = CP_Image_Load("Assets/Arrow.png");
+    Anim_Init(&knight.idle, "Assets/Knight_Idle.png", 120, 80, 0.12f, 1);
+    Anim_Init(&knight.run, "Assets/Knight_Run.png", 120, 80, 0.12f, 1);
+    Anim_Init(&knight.attack, "Assets/Knight_Attack.png", 120, 80, 0.10f, 0);
+	Anim_Init(&dummy.idle, "Assets/RP_Idle.png", 32, 32, 0.12f, 1);
+	Anim_Init(&dummy.run, "Assets/RP_Run.png", 32, 32, 0.12f, 1);
+
+	font_menu = CP_Font_Load("./Assets/Exo2-Regular.ttf");
+	CP_Font_Set(font_menu); //set the font used
+	CP_Settings_TextSize(72); //set the font size
+	CP_Settings_RectMode(CP_POSITION_CENTER);
+	CP_Settings_EllipseMode(CP_POSITION_CENTER);
 
 	// Obstacle Values
 	for (int i = 0; i < MAX_OBSTACLE; i++) {
@@ -101,50 +87,99 @@ void Game_Init(void)
 
 void Game_Update(void)
 {
-	CP_Graphics_ClearBackground(CP_Color_Create(128, 128, 128, 255));
-	float dt = CP_System_GetDt();
+	float windowLength = CP_System_GetWindowWidth();
+	float windowHeight = CP_System_GetWindowHeight();
+    CP_Graphics_ClearBackground(CP_Color_Create(80, 80, 80, 255));
+    CP_Settings_ImageMode(CP_POSITION_CORNER);
+    CP_Image_Draw(bg, 0, 0, 1600, 900, 255);
+    float dt = CP_System_GetDt();
+	float half_size = knight.size / 2.0f;
+    int moving = 0;
+    
+    if (CP_Input_KeyDown(KEY_W)) 
+    {
+        knight.y -= knight.speed * dt;
+        moving = 1;
+    }
+    if (CP_Input_KeyDown(KEY_S))
+    { 
+        knight.y += knight.speed * dt;
+        moving = 1; 
+    }
+    if (CP_Input_KeyDown(KEY_A)) 
+    { 
+        knight.x -= knight.speed * dt;
+        knight.is_right = 0;
+        moving = 1;
+    }
+    if 
+        (CP_Input_KeyDown(KEY_D))
+    { 
+        knight.x += knight.speed * dt;
+        knight.is_right = 1;
+        moving = 1;
+    }
 
-	//Player Controls
-	if (CP_Input_KeyDown(KEY_W)) {
-		player.y += -player.speed * dt; // Move Up
-	}
-	else if (CP_Input_KeyDown(KEY_S)) {
-		player.y += player.speed * dt; // Move down
-	}
-	if (CP_Input_KeyDown(KEY_A)) {
-		player.x += -player.speed * dt; // Move left
-	}
-	else if (CP_Input_KeyDown(KEY_D)) {
-		player.x += player.speed * dt; // Move right
-	}
-	//
+    // decide the state (can't change state mid-attack)
+    if (knight.state != ATTACK)
+    {
+        if (CP_Input_MouseTriggered(MOUSE_BUTTON_LEFT))
+        {
+            knight.state = ATTACK;
+            Anim_Reset(&knight.attack);
+        }
+        else
+        {
+        knight.state = moving ? RUN : IDLE;
+        }
+    }
+	// reverse the image if player is moving left
+    float draw_width = knight.is_right == 1 ? 160 : -160;
+    
+    // draw image based on the player state
+    switch (knight.state)
+    {
+    case IDLE:
+        Anim_Update(&knight.idle, dt);
+        Anim_Draw(&knight.idle, knight.x, knight.y - half_size, draw_width, 120);
+        break;
+    case RUN:
+        Anim_Update(&knight.run, dt);
+        Anim_Draw(&knight.run, knight.x, knight.y - half_size, draw_width, 120);
+        break;
+    case ATTACK:
+        if (Anim_Update(&knight.attack, dt))
+        {
+			knight.state = IDLE;
+        }
+        Anim_Draw(&knight.attack, knight.x, knight.y, draw_width, 100);
+        break;
+    }
+	draw_width = knight.is_right == 1 ? 110 : -110;
 	/*------------------------------------------------------------------------------*/
 	float mouseX = CP_Input_GetMouseX();
 	float mouseY = CP_Input_GetMouseY();
-	float Vec_X = 0.0f;
-	float Vec_Y = 0.0f;
-	float dist = 0.0f;
-	float Norm_X = 0.0f;
-	float Norm_Y = 0.0f;
 
 	if (CP_Input_MouseClicked()) {
 		for (int i = 0; i < MAX_BULLETS; i++) {
 			if (bullets[i].state == 0) {
 				// Find the Vector between Player and Mouse
-				Vec_X = mouseX - player.x;
-				Vec_Y = mouseY - player.y;
+				Vec_X = mouseX - knight.x;
+				Vec_Y = mouseY - knight.y;
 				// Calculate the Euclidean distance using Pythagoras Theorem
 				dist = sqrtf((Vec_X * Vec_X) + (Vec_Y * Vec_Y));
 				// Normalize the Vector
 				Norm_X = Vec_X / dist;
 				Norm_Y = Vec_Y / dist;
 
-				// Bullet comes from player xy coords
-				bullets[i].x = player.x;
-				bullets[i].y = player.y;
+				// Bullet comes from knight xy coords
+				bullets[i].x = knight.x;
+				bullets[i].y = knight.y;
 				// Bullet speed
 				bullets[i].speed_x = Norm_X * 450.0f;
 				bullets[i].speed_y = Norm_Y * 450.0f;
+				// Calculate and store the value of the direction the bullet is facing
+				bullets[i].angle = CP_Math_Degrees(atan2f(Vec_Y, Vec_X));
 				bullets[i].size = 15.0f; // Size
 				bullets[i].state = 1; // Active State
 				break;
@@ -182,19 +217,19 @@ void Game_Update(void)
 	}
 	//
 	/*------------------------------------------------------------------------------*/
-	float half_size = player.size / 2.0f;
+	// get coordinates of top, bottom, left, right
 
-	if (player.x - half_size < 0) {
-		player.x = half_size;
+	if (knight.x - half_size < 0) {
+		knight.x = half_size;
 	}
-	if (player.x + half_size > 1600.0f) {
-		player.x = 1600.0f - half_size;
+	if (knight.x + half_size > windowLength) {
+		knight.x = windowLength - half_size;
 	}
-	if (player.y - half_size < 0) {
-		player.y = half_size;
+	if (knight.y - half_size < 0) {
+		knight.y = half_size;
 	}
-	if (player.y + half_size > 900.0f) {
-		player.y = 900.0f - half_size;
+	if (knight.y + half_size > windowHeight) {
+		knight.y = windowHeight - half_size;
 	}
 	//AABB INTERSECTION !!!!
 	// For Player
@@ -205,61 +240,31 @@ void Game_Update(void)
 		float minY = obstacle[i].y - obstacle[i].height / 2.0f;
 		float maxY = obstacle[i].y + obstacle[i].height / 2.0f;
 		//Determine point Q in AABB where that is closest to the sphere
-		float Qx = findQ(player.x, minX, maxX);
-		float Qy = findQ(player.y, minY, maxY);
+		float Qx = findQ(knight.x, minX, maxX);
+		float Qy = findQ(knight.y, minY, maxY);
 		//Calculating the squared distance of Q - Player center
-		float VQC_X = player.x - Qx;
-		float VQC_Y = player.y - Qy;
+		float VQC_X = knight.x - Qx;
+		float VQC_Y = knight.y - Qy;
 		float distSq = (VQC_X * VQC_X) + (VQC_Y * VQC_Y);
 		//Determined colision occurs whehter radius squared is more than distance squared
 		float rSq = half_size * half_size;
 		if (distSq < rSq) {
 			float distance = sqrtf(distSq);
+			if (distance == 0.0f) distance = 0.001f;
 			float nV_X = VQC_X / distance;
 			float nV_Y = VQC_Y / distance;
 			//Calculate the distance the player is clipping through
 			float collision = half_size - distance;
 			//Applies the positional update on circle position outside of rectangle
-			player.x += nV_X * collision;
-			player.y += nV_Y * collision;
+			knight.x += nV_X * collision;
+			knight.y += nV_Y * collision;
 		}
 	}
 	//For dummy
-	//for (int i = 0; i < MAX_OBSTACLE; i++) {
-	//	//Calculate the min and max for x and y coordinates
-	//	float minX = obstacle[i].x - obstacle[i].width / 2.0f;
-	//	float maxX = obstacle[i].x + obstacle[i].width / 2.0f;
-	//	float minY = obstacle[i].y - obstacle[i].height / 2.0f;
-	//	float maxY = obstacle[i].y + obstacle[i].height / 2.0f;
-	//	//Determine point Q in AABB where that is closest to the sphere
-	//	float Qx = findQ(dummy.x, minX, maxX);
-	//	float Qy = findQ(dummy.y, minY, maxY);
-	//	//Calculating the squared distance of Q - Player center
-	//	float VQC_X = dummy.x - Qx;
-	//	float VQC_Y = dummy.y - Qy;
-	//	float distSq = (VQC_X * VQC_X) + (VQC_Y * VQC_Y);
-	//	//Determined colision occurs whehter radius squared is more than distance squared
-	//	float rSq = half_size * half_size;
-	//	if (distSq < rSq) {
-	//		float distance = sqrtf(distSq);
-	//		if (distance == 0.0f) distance = 0.001f; //Safety net
-	//		float nV_X = VQC_X / distance;
-	//		float nV_Y = VQC_Y / distance;
-	//		//Calculate the distance the player is clipping through
-	//		float collision = half_size - distance;
-	//		//Applies the positional update on circle position outside of rectangle
-	//		dummy.x += nV_X * collision;
-	//		dummy.y += nV_Y * collision;
-	//	}
-	//}
+
 	/*------------------------------------------------------------------------------*/
-	float VDP_X = 0.0f;
-	float VDP_Y = 0.0f;
-	float VDP_dist = 0.0f;
-	float NVDP_X = 0.0f;
-	float NVDP_Y = 0.0f;
-	VDP_X = player.x - dummy.x;
-	VDP_Y = player.y - dummy.y;
+	VDP_X = knight.x - dummy.x;
+	VDP_Y = knight.y - dummy.y;
 	// Calculate the Euclidean distance using Pythagoras Theorem
 	VDP_dist = sqrtf((VDP_X * VDP_X) + (VDP_Y * VDP_Y));
 	if (VDP_dist == 0.0f) { VDP_dist = 1.0f; }
@@ -277,16 +282,23 @@ void Game_Update(void)
 		dummy.x += (NVDP_X * 200.0f) * dt;
 		dummy.y += (NVDP_Y * 200.0f) * dt;
 	}
-
-
-	// Generating Player Circle
-	CP_Settings_Fill(CP_Color_Create(0, 0, 255, 255));
-	CP_Graphics_DrawCircle(player.x, player.y, player.size);
-
-	// Dummy
 	if (dummy.counter != 0) {
-		CP_Settings_Fill(CP_Color_Create(255, 255, 255, 255));
-		CP_Graphics_DrawRect(dummy.x, dummy.y, dummy.width, dummy.height);
+		dummy.state = dummy.chase == 1 ? RUN : IDLE;
+		// check if player is on which side of the enemy
+		dummy.is_right = knight.x > dummy.x ? 1 : 0;
+		// turns right if enemy is on the right
+		draw_width = dummy.is_right == 1 ? 80 : -80;
+
+		switch (dummy.state)
+		{
+		case IDLE:
+			Anim_Update(&dummy.idle, dt);
+			Anim_Draw(&dummy.idle, dummy.x, dummy.y, draw_width, 80);
+			break;
+		case RUN:
+			Anim_Update(&dummy.run, dt);
+			Anim_Draw(&dummy.run, dummy.x, dummy.y, draw_width, 80);
+		}
 		CP_Settings_Fill(CP_Color_Create(0, 0, 0, 255));
 		snprintf(text, sizeof(text), "%d", dummy.counter);
 		CP_Font_DrawText(text, dummy.x, dummy.y - (dummy.height / 2.0f) - 12.0f);
@@ -296,20 +308,18 @@ void Game_Update(void)
 		CP_Settings_Fill(CP_Color_Create(255, 0, 0, 255));
 		CP_Graphics_DrawRect(obstacle[i].x, obstacle[i].y, obstacle[i].width, obstacle[i].height);
 	}
-
+	
 	// Generating Projectie
 	for (int i = 0; i < MAX_BULLETS; i++) {
 		if (bullets[i].state == 1) {
-			CP_Settings_Fill(CP_Color_Create(255, 0, 0, 255));
-			CP_Graphics_DrawCircle(bullets[i].x, bullets[i].y, bullets[i].size);
+			CP_Image_DrawSubImageAdvanced(arrow, bullets[i].x, bullets[i].y, 32, 32, 32, 0, 48, 16, 255, bullets[i].angle);
 		}
 	}
-
+	//CP_Graphics_DrawCircle(knight.x, knight.y, knight.size);
 	if (CP_Input_KeyDown(KEY_Q)) {
 		CP_Engine_SetNextGameState(Main_Menu_Init, Main_Menu_Update, Main_Menu_Exit);
-		move = 1;
+		
 	}
-
 }
 
 void Game_Exit(void)
