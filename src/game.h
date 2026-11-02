@@ -36,7 +36,6 @@ typedef struct {
 	float speed_y;
 } Bullet;
 
-
 typedef struct {
 	float x;
 	float y;

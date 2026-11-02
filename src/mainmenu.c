@@ -92,5 +92,5 @@ void Main_Menu_Update(void)
 
 void Main_Menu_Exit(void)
 {
-   
+	CP_Font_Free(&globalfont);
 }
