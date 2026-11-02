@@ -42,7 +42,40 @@ typedef struct {
 	float width;
 	float height;
 } Obstacle;
+//---------------------------------------------------------
+typedef struct {
+	float x;
+	float y;
+	float width;
+	float height;
+	int collected; // 0 not collected, 1 collected
+} SpeedBoost;
 
+typedef struct {
+	float x;
+	float y;
+	float width;
+	float height;
+	int noOfEffects;
+} Effects;
+
+typedef struct {
+	float y;          // vertical position of the box
+	float width;
+	float height;
+	float timeLeft;   // seconds remaining
+	char text[8];    // the "01:00" string
+} Timer;
+
+typedef struct {
+	float y;          // vertical position of the box
+	float width;
+	float height;
+	int total;
+	int amount;
+	char text[10];    // the "0 / 10" string
+} KillCount;
+//---------------------------------------------------------
 
 extern int random[LEVELS];
 extern int current_level;

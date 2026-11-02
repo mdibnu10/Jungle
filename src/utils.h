@@ -44,6 +44,7 @@ typedef struct {
 	int counter;
 	int chase;
 	int is_right;
+	int dead;
 	PlayerState state;
 	Animation idle, run, attack;
 } Enemy;
@@ -56,3 +57,10 @@ void Anim_Draw(const Animation* a, float x, float y, float w, float h);
 float findQ(float value, float min, float max);
 
 //>>>>>>> main
+
+//---------------------------------------------------------
+//Darrel
+
+int IsSquareCircleColliding(float square_center_x, float square_center_y, float square_width, float square_height, float circle_center_x, float circle_center_y, float circle_radius);
+
+unsigned int random_range(unsigned int min, unsigned int max);

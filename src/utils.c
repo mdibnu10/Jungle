@@ -82,3 +82,25 @@ float findQ(float value, float min, float max) {
 	return value;
 //>>>>>>> main
 }
+//---------------------------------------------------------
+//Darrel
+//---------------------------------------------------------
+int IsSquareCircleColliding(float square_center_x, float square_center_y, float square_width, float square_height, float circle_center_x, float circle_center_y, float circle_radius)
+{
+	if (
+		fabs(circle_center_x - square_center_x) <= (square_width / 2 + circle_radius) &&
+		fabs(circle_center_y - square_center_y) <= (square_height / 2 + circle_radius)
+		)
+	{
+		return 1;
+	}
+	else
+	{
+		return 0;
+	}
+}
+
+unsigned int random_range(unsigned int min, unsigned int max)
+{
+	return min + rand() % (max - min + 1);
+}
