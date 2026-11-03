@@ -31,18 +31,42 @@ float Obs_Y[MAX_OBSTACLE] = { 200, 700, 600 };
 float Obs_W[MAX_OBSTACLE] = { 30, 60, 90 };
 float Obs_H[MAX_OBSTACLE] = { 40, 80, 160 };
 
+//---------------------------------------------------------
+//Darrel
+//---------------------------------------------------------
+Effects effects;
+SpeedBoost speedboost;
+Timer timer;
+KillCount killcount;
+
+int lives = 3;
+int GAMEOVER = 0;
+int HPBARHEALTH;
+int randomX;
+int randomY;
+float hitTimer = 0.0f;
+int ClickedSlot = 1;
+int Paused = 0;
+int GameMode = 0; //0 = Time-Based, 1 = Kill-Based
+//---------------------------------------------------------
+float ObsminX, ObsmaxX, ObsminY, ObsmaxY;
+float KnightminX, KnightmaxX, KnightminY, KnightmaxY;
+float DummmyminX, DummymaxX, DummyminY, DummymaxY;
+float overlapX, overlapY;
+
 void Game_Init(void)
 {
     knight.x = 800.0f;
     knight.y = 450.0f;
-    knight.speed = 250.0f;
+    knight.speed = 200.0f;
     knight.state = IDLE;
-	knight.size = 50.0f;
+	knight.width = 50;
+	knight.height = 60;
 
-	dummy.x = 500;
-	dummy.y = 300;
+	dummy.x = random_range(100, 1500);
+	dummy.y = random_range(100, 600);
 	dummy.width = 60;
-	dummy.height = 80;
+	dummy.height = 40;
 	dummy.counter = 10;
 	dummy.chase = 0;
 
@@ -83,6 +107,42 @@ void Game_Init(void)
 	for (int i = 0; i < MAX_BULLETS; i++) {
 		bullets[i].state = 0;
 	}
+
+	//---------------------------------------------------------
+	//Darrel
+	//---------------------------------------------------------
+	//SpeedBoost Values
+	speedboost.x = 100;
+	speedboost.y = 100;
+	speedboost.width = 30;
+	speedboost.height = 30;
+	speedboost.collected = 0;
+
+	//Effects Values
+	effects.noOfEffects = 1;
+
+	//Pause Mode
+	Paused = 0;
+
+	HPBARHEALTH = knight.width;
+	randomX = random_range(100, CP_System_GetDisplayWidth() - 110);
+	randomY = random_range(100, CP_System_GetDisplayHeight() - 110);
+
+	//Timer Values
+	timer.y = 50.0f;
+	timer.width = 200.0f;
+	timer.height = 70.0f;
+	timer.timeLeft = 60.0f;
+	//KillCount Values
+	killcount.y = 50.0f;
+	killcount.width = 200.0f;
+	killcount.height = 70.0f;
+	killcount.total = 10;
+	killcount.amount = 0;
+
+	GameMode = random_range(0, 1); // 0 for Time-Based, 1 for Kill-Based
+	GAMEOVER = 0; // Reset game over state
+	lives = 3; // Reset lives
 }
 
 void Game_Update(void)
@@ -91,42 +151,63 @@ void Game_Update(void)
 	float windowHeight = CP_System_GetWindowHeight();
     CP_Graphics_ClearBackground(CP_Color_Create(80, 80, 80, 255));
     CP_Settings_ImageMode(CP_POSITION_CORNER);
-    CP_Image_Draw(bg, 0, 0, 1600, 900, 255);
+    CP_Image_Draw(bg, 0, 0, windowLength, windowHeight, 255);
     float dt = CP_System_GetDt();
-	float half_size = knight.size / 2.0f;
+	float half_width = knight.width / 2.0f;
+	float half_height = knight.height / 2.0f;
     int moving = 0;
-    
-    if (CP_Input_KeyDown(KEY_W)) 
-    {
-        knight.y -= knight.speed * dt;
-        moving = 1;
-    }
-    if (CP_Input_KeyDown(KEY_S))
-    { 
-        knight.y += knight.speed * dt;
-        moving = 1; 
-    }
-    if (CP_Input_KeyDown(KEY_A)) 
-    { 
-        knight.x -= knight.speed * dt;
-        knight.is_right = 0;
-        moving = 1;
-    }
-    if 
-        (CP_Input_KeyDown(KEY_D))
-    { 
-        knight.x += knight.speed * dt;
-        knight.is_right = 1;
-        moving = 1;
-    }
-
+	//---------------------------------------------------------
+	//Darrel
+	//---------------------------------------------------------
+	if (hitTimer > 0.0f && Paused == 0) {
+		hitTimer -= dt;
+	}
+	if (GAMEOVER != 1 && Paused == 0 && timer.timeLeft > 0.0f) {
+		timer.timeLeft -= dt;
+		if (timer.timeLeft <= 0.0f) {
+			timer.timeLeft = 0.0f;
+			GAMEOVER = 1; // time's up
+		}
+	}
+	//---------------------------------------------------------
+    // Player's Control
+	if (GAMEOVER != 1 && Paused == 0) {
+		if (CP_Input_KeyDown(KEY_W))
+		{
+			knight.y -= knight.speed * dt;
+			moving = 1;
+		}
+		if (CP_Input_KeyDown(KEY_S))
+		{
+			knight.y += knight.speed * dt;
+			moving = 1;
+		}
+		if (CP_Input_KeyDown(KEY_A))
+		{
+			knight.x -= knight.speed * dt;
+			knight.is_right = 0;
+			moving = 1;
+		}
+		if
+			(CP_Input_KeyDown(KEY_D))
+		{
+			knight.x += knight.speed * dt;
+			knight.is_right = 1;
+			moving = 1;
+		}
+	}
+	//---------------------------------------------------------------------
+	//For testing purposes
+	//CP_Graphics_DrawRect(knight.x, knight.y, knight.width, knight.height);
+	//CP_Graphics_DrawRect(dummy.x, dummy.y, dummy.width, dummy.height);
+	//---------------------------------------------------------------------
     // decide the state (can't change state mid-attack)
     if (knight.state != ATTACK)
     {
-        if (CP_Input_MouseTriggered(MOUSE_BUTTON_LEFT))
+        if (CP_Input_MouseTriggered(MOUSE_BUTTON_LEFT) && Paused != 1)
         {
-            knight.state = ATTACK;
-            Anim_Reset(&knight.attack);
+			knight.state = ATTACK;
+			Anim_Reset(&knight.attack);
         }
         else
         {
@@ -141,11 +222,11 @@ void Game_Update(void)
     {
     case IDLE:
         Anim_Update(&knight.idle, dt);
-        Anim_Draw(&knight.idle, knight.x, knight.y - half_size, draw_width, 120);
+        Anim_Draw(&knight.idle, knight.x, knight.y - knight.height / 2.0f, draw_width, 120);
         break;
     case RUN:
         Anim_Update(&knight.run, dt);
-        Anim_Draw(&knight.run, knight.x, knight.y - half_size, draw_width, 120);
+        Anim_Draw(&knight.run, knight.x, knight.y - knight.height / 2.0f, draw_width, 120);
         break;
     case ATTACK:
         if (Anim_Update(&knight.attack, dt))
@@ -160,7 +241,7 @@ void Game_Update(void)
 	float mouseX = CP_Input_GetMouseX();
 	float mouseY = CP_Input_GetMouseY();
 
-	if (CP_Input_MouseClicked()) {
+	if (CP_Input_MouseClicked() && Paused == 0 && !IsAreaClicked(50, 50, 50, 50, CP_Input_GetMouseX(), CP_Input_GetMouseY())) {
 		for (int i = 0; i < MAX_BULLETS; i++) {
 			if (bullets[i].state == 0) {
 				// Find the Vector between Player and Mouse
@@ -171,7 +252,6 @@ void Game_Update(void)
 				// Normalize the Vector
 				Norm_X = Vec_X / dist;
 				Norm_Y = Vec_Y / dist;
-
 				// Bullet comes from knight xy coords
 				bullets[i].x = knight.x;
 				bullets[i].y = knight.y;
@@ -187,7 +267,7 @@ void Game_Update(void)
 		}
 	}
 	for (int i = 0; i < MAX_BULLETS; i++) {
-		if (bullets[i].state == 1) {
+		if (bullets[i].state == 1 && Paused != 1) {
 			bullets[i].x += bullets[i].speed_x * dt;
 			bullets[i].y += bullets[i].speed_y * dt;
 			// Window Size Reference (1600, 900);
@@ -219,66 +299,60 @@ void Game_Update(void)
 	/*------------------------------------------------------------------------------*/
 	// get coordinates of top, bottom, left, right
 
-	if (knight.x - half_size < 0) {
-		knight.x = half_size;
+	if (knight.x - half_width < 0) {
+		knight.x = half_width;
 	}
-	if (knight.x + half_size > windowLength) {
-		knight.x = windowLength - half_size;
+	if (knight.x + half_width > windowLength) {
+		knight.x = windowLength - half_width;
 	}
-	if (knight.y - half_size < 0) {
-		knight.y = half_size;
+	if (knight.y - half_height < 0) {
+		knight.y = half_height;
 	}
-	if (knight.y + half_size > windowHeight) {
-		knight.y = windowHeight - half_size;
+	if (knight.y + half_height > windowHeight) {
+		knight.y = windowHeight - half_height;
 	}
 	//AABB INTERSECTION !!!!
-	// For Player
+	// For Knight
 	for (int i = 0; i < MAX_OBSTACLE; i++) {
-		//Calculate the min and max for x and y coordinates
-		float minX = obstacle[i].x - obstacle[i].width / 2.0f;
-		float maxX = obstacle[i].x + obstacle[i].width / 2.0f;
-		float minY = obstacle[i].y - obstacle[i].height / 2.0f;
-		float maxY = obstacle[i].y + obstacle[i].height / 2.0f;
-		//Determine point Q in AABB where that is closest to the sphere
-		float Qx = findQ(knight.x, minX, maxX);
-		float Qy = findQ(knight.y, minY, maxY);
-		//Calculating the squared distance of Q - Player center
-		float VQC_X = knight.x - Qx;
-		float VQC_Y = knight.y - Qy;
-		float distSq = (VQC_X * VQC_X) + (VQC_Y * VQC_Y);
-		//Determined colision occurs whehter radius squared is more than distance squared
-		float rSq = half_size * half_size;
-		if (distSq < rSq) {
-			float distance = sqrtf(distSq);
-			if (distance == 0.0f) distance = 0.001f;
-			float nV_X = VQC_X / distance;
-			float nV_Y = VQC_Y / distance;
-			//Calculate the distance the player is clipping through
-			float collision = half_size - distance;
-			//Applies the positional update on circle position outside of rectangle
-			knight.x += nV_X * collision;
-			knight.y += nV_Y * collision;
+		if (IsSquareColliding(obstacle[i].x, obstacle[i].y, obstacle[i].width, obstacle[i].height, knight.x, knight.y, knight.width, knight.height, &overlapX, &overlapY)) {
+			if (overlapX < overlapY) {
+				knight.x = (knight.x < obstacle[i].x) ? (knight.x -= overlapX) : (knight.x += overlapX);
+			}
+			else {
+				knight.y = (knight.y < obstacle[i].y) ? (knight.y -= overlapY) : (knight.y += overlapY);
+			}
 		}
 	}
-	//For dummy
-
 	/*------------------------------------------------------------------------------*/
-	VDP_X = knight.x - dummy.x;
-	VDP_Y = knight.y - dummy.y;
-	// Calculate the Euclidean distance using Pythagoras Theorem
-	VDP_dist = sqrtf((VDP_X * VDP_X) + (VDP_Y * VDP_Y));
-	if (VDP_dist == 0.0f) { VDP_dist = 1.0f; }
-	// Normalize the Vector
-	NVDP_X = VDP_X / VDP_dist;
-	NVDP_Y = VDP_Y / VDP_dist;
-
-	if (VDP_dist <= 300) {
+	//For dummy
+	for (int i = 0; i < MAX_OBSTACLE; i++) {
+		if (IsSquareColliding(obstacle[i].x, obstacle[i].y, obstacle[i].width, obstacle[i].height, dummy.x, dummy.y, dummy.width, dummy.height, &overlapX, &overlapY)) {
+			if (overlapX < overlapY) {
+				dummy.x = (dummy.x < obstacle[i].x) ? (dummy.x -= overlapX) : (dummy.x += overlapX);
+			}
+			else {
+				dummy.y = (dummy.y < obstacle[i].y) ? (dummy.y -= overlapY) : (dummy.y += overlapY);
+			}
+		}
+	}
+	/*------------------------------------------------------------------------------*/
+	if (dummy.counter != 0) {
+		VDP_X = knight.x - dummy.x;
+		VDP_Y = knight.y - dummy.y;
+		// Calculate the Euclidean distance using Pythagoras Theorem
+		VDP_dist = sqrtf((VDP_X * VDP_X) + (VDP_Y * VDP_Y));
+		if (VDP_dist == 0.0f) { VDP_dist = 1.0f; }
+		// Normalize the Vector
+		NVDP_X = VDP_X / VDP_dist;
+		NVDP_Y = VDP_Y / VDP_dist;
+	}
+	if (VDP_dist <= 300 && dummy.counter != 0 && Paused != 1) {
 		dummy.chase = 1;
 	}
 	else {
 		dummy.chase = 0;
 	}
-	if (dummy.chase == 1) {
+	if (dummy.chase == 1 && GAMEOVER != 1) {
 		dummy.x += (NVDP_X * 200.0f) * dt;
 		dummy.y += (NVDP_Y * 200.0f) * dt;
 	}
@@ -293,7 +367,7 @@ void Game_Update(void)
 		{
 		case IDLE:
 			Anim_Update(&dummy.idle, dt);
-			Anim_Draw(&dummy.idle, dummy.x, dummy.y, draw_width, 80);
+			Anim_Draw(&dummy.idle, dummy.x, dummy.y - dummy.height / 2.0f, draw_width, 80);
 			break;
 		case RUN:
 			Anim_Update(&dummy.run, dt);
@@ -308,7 +382,184 @@ void Game_Update(void)
 		CP_Settings_Fill(CP_Color_Create(255, 0, 0, 255));
 		CP_Graphics_DrawRect(obstacle[i].x, obstacle[i].y, obstacle[i].width, obstacle[i].height);
 	}
-	
+	//---------------------------------------------------------
+	//Darrel
+	//---------------------------------------------------------
+	if (dummy.counter == 0 && dummy.dead == 0)
+	{
+		dummy.dead = 1;
+		killcount.amount++;
+	}
+
+	//If Pause is clicked, pause the game first and stop everything.
+	if (IsAreaClicked(50, 50, 50, 50, CP_Input_GetMouseX(), CP_Input_GetMouseY()))
+	{
+		if (Paused == 0)
+		{
+			Paused = 1;
+		}
+		else
+		{
+			Paused = 0;
+		}
+	}
+	//If Player and Dummt collide, lose a life and reset player position.
+	//if (IsSquareCircleColliding(dummy.x, dummy.y, dummy.width, dummy.height, knight.x, knight.y, knight.size / 2.0f) && dummy.counter != 0 && Paused == 0)
+	if (IsSquareColliding2(dummy.x, dummy.y, dummy.width, dummy.height,knight.x, knight.y, knight.width, knight.height) && dummy.counter != 0 && Paused == 0) {
+		// Handle collision
+		HPBARHEALTH -= 0.10f;
+		hitTimer = 0.15f;
+		if (HPBARHEALTH < 0) {
+			HPBARHEALTH = 0;
+		}
+	}
+	//If Player and SpeedBoost collide, gain a speed boost for 5 seconds.
+	if (speedboost.collected != 1) {
+		if (IsSquareColliding2(randomX, randomY, speedboost.width, speedboost.height, knight.x, knight.y, knight.width, knight.height))
+		{
+			knight.speed += 10.0f;
+			speedboost.collected = 1;
+			effects.noOfEffects += 1;
+		}
+	}
+
+	//Draw a smaller HP bar below the player to show how much health the player has.
+	//Disappears when SpeedBoost is collected.
+	CP_Settings_Fill(CP_Color_Create(0, 70, 0, 255));
+	CP_Settings_RectMode(CP_POSITION_CORNER);
+	CP_Graphics_DrawRect(knight.x - (knight.width / 2.0f), knight.y + (knight.height / 2.0f + 10.0f), HPBARHEALTH, 10.0f);
+
+	//Draw Speed-Boost Power Up Bar
+	if (speedboost.collected == 0) {
+		CP_Settings_Fill(CP_Color_Create(0, 255, 255, 255));
+		CP_Graphics_DrawRect(randomX, randomY, 10.0f, 10.0f);
+	}
+
+	//Draw the Effect Status Box
+	if (effects.noOfEffects > 0) {
+		for (int i = 0; i < effects.noOfEffects; i++) {
+			CP_Settings_Fill(CP_Color_Create(255, 0, 255, 255));
+			CP_Graphics_DrawRect(windowLength - 100, windowHeight - 100 - (i * 60), 50.0f, 50.0f);
+		}
+	}
+	//Draw the Heart as a a circle for now.
+	CP_Settings_Fill(CP_Color_Create(255, 70, 0, 255));
+	if (HPBARHEALTH != 0)
+	{
+		for (int i = lives; i != 0; i--)
+		{
+			CP_Graphics_DrawCircle(15 + (i * 80), windowHeight - 60, 70);
+		}
+	}
+	else
+	{
+		if (lives == 1)
+		{
+			CP_Settings_Fill(CP_Color_Create(0, 0, 0, 255));
+			CP_Font_DrawText("GAME OVER", windowLength / 2.0f - 200.0f, windowHeight / 2.0f);
+			GAMEOVER = 1;
+		}
+		else
+		{
+			lives--;
+			knight.x = windowLength / 2.0f;
+			knight.y = windowHeight / 2.0f;
+			HPBARHEALTH = knight.width;
+		}
+	}
+	//Draw the pause button in the top right corner of the screen.
+	CP_Settings_Fill(CP_Color_Create(0, 0, 0, 255));
+	CP_Settings_RectMode(CP_POSITION_CENTER);
+	CP_Graphics_DrawRect(50, 50, 50, 50);
+
+	//Inventory Slot Selection
+	if (CP_Input_KeyTriggered(KEY_1)) { ClickedSlot = 1; }
+	if (CP_Input_KeyTriggered(KEY_2)) { ClickedSlot = 2; }
+	if (CP_Input_KeyTriggered(KEY_3)) { ClickedSlot = 3; }
+
+	//Draw the Inventory in white (3 boxes)
+	CP_Settings_Fill(CP_Color_Create(0, 0, 0, 255));
+	CP_Settings_RectMode(CP_POSITION_CENTER);
+
+	for (int i = 1; i <= 3; i++) {
+		if (i == ClickedSlot) {
+			CP_Settings_Fill(CP_Color_Create(255, 255, 0, 255));
+		}
+		else {
+			CP_Settings_Fill(CP_Color_Create(255, 255, 255, 255));
+		}
+		CP_Graphics_DrawRect(windowLength / 2.0f + ((i - 2) * 60), windowHeight - 45, 50, 50);
+	}
+	if (GameMode == 0) {
+		//Timer Progression Code
+		int totalSeconds = (int)(timer.timeLeft + 0.999f);
+		static int lastSeconds = -1;
+
+		snprintf(timer.text, sizeof(timer.text), "%02d:%02d", totalSeconds / 60, totalSeconds % 60);
+
+		if (totalSeconds != lastSeconds) {
+			printf("%s\n", timer.text);
+			lastSeconds = totalSeconds;
+		}
+
+		CP_Settings_RectMode(CP_POSITION_CENTER);
+		CP_Settings_Fill(CP_Color_Create(255, 255, 255, 255)); // white box
+		CP_Graphics_DrawRect(windowLength / 2.0f, timer.y, timer.width, timer.height);
+
+		if (timer.timeLeft <= 10.0f) {
+			CP_Settings_Fill(CP_Color_Create(255, 0, 0, 255)); // red in last 10 seconds
+		}
+		else {
+			CP_Settings_Fill(CP_Color_Create(0, 0, 0, 255));   // black text
+		}
+		CP_Settings_TextSize(50.0f);
+		CP_Settings_TextAlignment(CP_TEXT_ALIGN_H_CENTER, CP_TEXT_ALIGN_V_MIDDLE);
+		CP_Font_DrawText(timer.text, windowLength / 2.0f, timer.y);
+	}
+	else if (GameMode == 1) {
+		// Kill-Based Game Mode Code
+		snprintf(killcount.text, sizeof(killcount.text), "%02d / %02d", killcount.amount, killcount.total);
+
+		CP_Settings_RectMode(CP_POSITION_CENTER);
+		CP_Settings_Fill(CP_Color_Create(255, 255, 255, 255)); // white box
+		CP_Graphics_DrawRect(windowLength / 2.0f, killcount.y, killcount.width, killcount.height);
+
+		CP_Settings_Fill(CP_Color_Create(0, 0, 0, 255));
+		CP_Settings_TextSize(50.0f);
+		CP_Settings_TextAlignment(CP_TEXT_ALIGN_H_CENTER, CP_TEXT_ALIGN_V_MIDDLE);
+		CP_Font_DrawText(killcount.text, windowLength / 2.0f, killcount.y);
+	}
+
+	if (Paused == 1 && GAMEOVER == 0)
+	{
+		CP_Settings_Fill(CP_Color_Create(0, 0, 0, 255));
+		CP_Settings_TextSize(100.0f);
+		CP_Settings_TextAlignment(CP_TEXT_ALIGN_H_CENTER, CP_TEXT_ALIGN_V_MIDDLE);
+		CP_Font_DrawText("PAUSED", windowLength / 2.0f, windowHeight / 2.0f);
+
+		//If menu button is clicked, go back to main menu.
+		if (IsAreaClicked(windowLength / 2 + 300, windowHeight / 2 + 200, 200, 100, CP_Input_GetMouseX(), CP_Input_GetMouseY()))
+		{
+			CP_Engine_SetNextGameState(Main_Menu_Init, Main_Menu_Update, Main_Menu_Exit);
+		}
+
+		//If resume button is clicked, close pause mode and resume.
+		if (IsAreaClicked(windowLength / 2 - 300, windowHeight / 2 + 200, 200, 100, CP_Input_GetMouseX(), CP_Input_GetMouseY()))
+		{
+			Paused = 0;
+		}
+
+		//Menu Button
+		CP_Settings_Fill(CP_Color_Create(255, 255, 255, 255));
+		CP_Settings_RectMode(CP_POSITION_CENTER);
+		CP_Graphics_DrawRect(windowLength / 2 + 300, windowHeight / 2 + 200, 200, 100);
+
+		//Resume Button
+		CP_Settings_Fill(CP_Color_Create(255, 255, 255, 255));
+		CP_Settings_RectMode(CP_POSITION_CENTER);
+		CP_Graphics_DrawRect(windowLength / 2 - 300, windowHeight / 2 + 200, 200, 100);
+	}
+	//---------------------------------------------------------
 	// Generating Projectie
 	for (int i = 0; i < MAX_BULLETS; i++) {
 		if (bullets[i].state == 1) {
@@ -318,7 +569,6 @@ void Game_Update(void)
 	//CP_Graphics_DrawCircle(knight.x, knight.y, knight.size);
 	if (CP_Input_KeyDown(KEY_Q)) {
 		CP_Engine_SetNextGameState(Main_Menu_Init, Main_Menu_Update, Main_Menu_Exit);
-		
 	}
 }
 
