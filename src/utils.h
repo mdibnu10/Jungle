@@ -33,6 +33,8 @@ typedef struct Player
 	float width;
 	float height;
 	int is_right;
+	int iFrame;
+	float iFrameTimer;
 	PlayerState state;
 	Animation idle, run, attack;
 } Player;
@@ -65,5 +67,7 @@ float findQ(float value, float min, float max);
 //int IsSquareCircleColliding(float square_center_x, float square_center_y, float square_width, float square_height, float circle_center_x, float circle_center_y, float circle_radius);
 int IsSquareColliding(float sq1x, float sq1y, float sq1w, float sq1h, float sq2x, float sq2y, float sq2w, float sq2h, float* overlapX, float* overlapY);
 int IsSquareColliding2(float sq1x, float sq1y, float sq1w, float sq1h, float sq2x, float sq2y, float sq2w, float sq2h);
+
+int euclidean_distance(int x1, int y1, int x2, int y2);
 
 unsigned int random_range(unsigned int min, unsigned int max);

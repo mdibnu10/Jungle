@@ -141,6 +141,13 @@ int IsSquareColliding2(float sq1x, float sq1y, float sq1w, float sq1h, float sq2
 	}
 	return 1;
 }
+
+int euclidean_distance(int x1, int y1, int x2, int y2){
+	float VDP_X = x1 - x2;
+	float VDP_Y = y1 - y2;
+	// Calculate the Euclidean distance using Pythagoras Theorem
+	return (VDP_X * VDP_X) + (VDP_Y * VDP_Y);
+}
 unsigned int random_range(unsigned int min, unsigned int max)
 {
 	return min + rand() % (max - min + 1);

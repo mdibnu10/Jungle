@@ -12,6 +12,7 @@
 #define MAPS_PER_LEVEL 3
 #define MAX_OBSTACLE 3
 #define MAX_BULLETS 5
+#define MAX_BULLET_DISTANCE 280.0f
 
 void Game_Init(void);
 
@@ -29,6 +30,8 @@ typedef struct MapData
 typedef struct {
 	float x;
 	float y;
+	float start_x;
+	float start_y;
 	int state; // 0 inactive, 1 active
 	float size;
 	float angle;
