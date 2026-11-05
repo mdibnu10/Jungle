@@ -10,7 +10,7 @@
 //---------------------------------------------------------
 #define LEVELS 3
 #define MAPS_PER_LEVEL 3
-#define MAX_OBSTACLE 3
+#define MAX_OBSTACLE 5
 #define MAX_BULLETS 5
 
 void Game_Init(void);
@@ -22,7 +22,7 @@ void Game_Exit(void);
 typedef struct MapData
 {
     const char* image_path;
-    CP_Image image;        
+	const char* obstacle_path;
   
 } MapData;
 

@@ -20,7 +20,7 @@ CP_Image bg;
 MapData maps[LEVELS][MAPS_PER_LEVEL] =
 {
 	// Level 1: real maps
-	{ {"./Assets/A.png"}, {"./Assets/B.png"}, {"./Assets/C.png"} },
+	{ {"./Assets/A.png"}, {"./Assets/B.png"}, {"./Assets/C.png", "./Assets/obs1.png"}},
 
 	// Level 2: reuse lvl1 images for now as placeholders
 	{ {"./Assets/A.png"}, {"./Assets/B.png"}, {"./Assets/C.png"} },
