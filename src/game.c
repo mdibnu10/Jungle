@@ -54,6 +54,13 @@ float KnightminX, KnightmaxX, KnightminY, KnightmaxY;
 float DummmyminX, DummymaxX, DummyminY, DummymaxY;
 float overlapX, overlapY;
 
+CP_Sound slash;
+CP_Sound bowarrow;
+CP_Sound player_damage;
+int is_sound_playing = 0;
+
+CP_Image bow, sword, potion;
+
 void Game_Init(void)
 {
     knight.x = 800.0f;
@@ -89,7 +96,7 @@ void Game_Init(void)
 	Anim_Init(&dummy.idle, "Assets/RP_Idle.png", 32, 32, 0.12f, 1);
 	Anim_Init(&dummy.run, "Assets/RP_Run.png", 32, 32, 0.12f, 1);
 
-	font_menu = CP_Font_Load("./Assets/Exo2-Regular.ttf");
+	font_menu = CP_Font_Load("./Assets/Dalek.ttf");
 	CP_Font_Set(font_menu); //set the font used
 	CP_Settings_TextSize(72); //set the font size
 	CP_Settings_RectMode(CP_POSITION_CENTER);
@@ -143,6 +150,19 @@ void Game_Init(void)
 	GameMode = random_range(0, 1); // 0 for Time-Based, 1 for Kill-Based
 	GAMEOVER = 0; // Reset game over state
 	lives = 3; // Reset lives
+
+	// qusyairie -------------------------
+	// sound effects
+	bowarrow = CP_Sound_Load("./Assets/Audios/bow and arrow.wav"); // projectile sound effect
+	slash = CP_Sound_Load("./Assets/Audios/slashing.wav"); // sword attack sound
+	player_damage = CP_Sound_Load("./Assets/Audios/player damage.wav"); // player taking damage sound effect
+
+	// items in inventory
+	bow = CP_Image_Load("./Assets/Weapons/bow.png");
+	sword = CP_Image_Load("./Assets/Weapons/sword.png");
+	potion = CP_Image_Load("./Assets/health potion.png");
+	CP_Settings_ImageMode(CP_POSITION_CORNER);
+	CP_Settings_ImageWrapMode(CP_IMAGE_WRAP_CLAMP);
 }
 
 void Game_Update(void)
@@ -198,16 +218,17 @@ void Game_Update(void)
 	}
 	//---------------------------------------------------------------------
 	//For testing purposes
-	//CP_Graphics_DrawRect(knight.x, knight.y, knight.width, knight.height);
-	//CP_Graphics_DrawRect(dummy.x, dummy.y, dummy.width, dummy.height);
+	CP_Graphics_DrawRect(knight.x, knight.y, knight.width, knight.height);
+	CP_Graphics_DrawRect(dummy.x, dummy.y, dummy.width, dummy.height);
 	//---------------------------------------------------------------------
     // decide the state (can't change state mid-attack)
-    if (knight.state != ATTACK)
+    if (knight.state != ATTACK && ClickedSlot == 1)
     {
         if (CP_Input_MouseTriggered(MOUSE_BUTTON_LEFT) && Paused != 1)
         {
 			knight.state = ATTACK;
 			Anim_Reset(&knight.attack);
+			CP_Sound_Play(slash);
         }
         else
         {
@@ -241,7 +262,8 @@ void Game_Update(void)
 	float mouseX = CP_Input_GetMouseX();
 	float mouseY = CP_Input_GetMouseY();
 
-	if (CP_Input_MouseClicked() && Paused == 0 && !IsAreaClicked(50, 50, 50, 50, CP_Input_GetMouseX(), CP_Input_GetMouseY())) {
+	// when slot 2 is selected and used
+	if (CP_Input_MouseTriggered(MOUSE_BUTTON_LEFT) && Paused == 0 && !IsAreaClicked(50, 50, 50, 50, CP_Input_GetMouseX(), CP_Input_GetMouseY()) && ClickedSlot == 2) {
 		for (int i = 0; i < MAX_BULLETS; i++) {
 			if (bullets[i].state == 0) {
 				// Find the Vector between Player and Mouse
@@ -262,6 +284,7 @@ void Game_Update(void)
 				bullets[i].angle = CP_Math_Degrees(atan2f(Vec_Y, Vec_X));
 				bullets[i].size = 15.0f; // Size
 				bullets[i].state = 1; // Active State
+				CP_Sound_Play(bowarrow);
 				break;
 			}
 		}
@@ -392,7 +415,7 @@ void Game_Update(void)
 	}
 
 	//If Pause is clicked, pause the game first and stop everything.
-	if (IsAreaClicked(50, 50, 50, 50, CP_Input_GetMouseX(), CP_Input_GetMouseY()))
+	if (IsAreaClicked(50, 50, 50, 50, CP_Input_GetMouseX(), CP_Input_GetMouseY()) || CP_Input_KeyTriggered(KEY_ESCAPE))
 	{
 		if (Paused == 0)
 		{
@@ -403,14 +426,18 @@ void Game_Update(void)
 			Paused = 0;
 		}
 	}
-	//If Player and Dummt collide, lose a life and reset player position.
+	//If Player and Dummy collide, lose a life and reset player position.
 	//if (IsSquareCircleColliding(dummy.x, dummy.y, dummy.width, dummy.height, knight.x, knight.y, knight.size / 2.0f) && dummy.counter != 0 && Paused == 0)
 	if (IsSquareColliding2(dummy.x, dummy.y, dummy.width, dummy.height,knight.x, knight.y, knight.width, knight.height) && dummy.counter != 0 && Paused == 0) {
 		// Handle collision
 		HPBARHEALTH -= 0.10f;
 		hitTimer = 0.15f;
+		CP_Sound_Play(player_damage);
 		if (HPBARHEALTH < 0) {
 			HPBARHEALTH = 0;
+		}
+		if (ClickedSlot == 1 && CP_Input_MouseTriggered(MOUSE_BUTTON_LEFT)){ // if player and enemy collide, and player uses melee attack
+			dummy.counter -= 1; // enemy taking damage
 		}
 	}
 	//If Player and SpeedBoost collide, gain a speed boost for 5 seconds.
@@ -422,6 +449,11 @@ void Game_Update(void)
 			effects.noOfEffects += 1;
 		}
 	}
+
+	// Drawing UI border
+	CP_Settings_Fill(CP_Color_Create(140, 90, 50, 100));
+	CP_Settings_RectMode(CP_POSITION_CENTER);
+	CP_Graphics_DrawRect(windowLength / 2, windowHeight - 65.0f, windowLength, 130.0f);
 
 	//Draw a smaller HP bar below the player to show how much health the player has.
 	//Disappears when SpeedBoost is collected.
@@ -436,10 +468,10 @@ void Game_Update(void)
 	}
 
 	//Draw the Effect Status Box
+	CP_Settings_Fill(CP_Color_Create(255, 0, 255, 255));
 	if (effects.noOfEffects > 0) {
 		for (int i = 0; i < effects.noOfEffects; i++) {
-			CP_Settings_Fill(CP_Color_Create(255, 0, 255, 255));
-			CP_Graphics_DrawRect(windowLength - 100, windowHeight - 100 - (i * 60), 50.0f, 50.0f);
+			CP_Graphics_DrawCircle(windowLength - 95 - (i * 80), windowHeight - 60, 70);
 		}
 	}
 	//Draw the Heart as a a circle for now.
@@ -455,8 +487,14 @@ void Game_Update(void)
 	{
 		if (lives == 1)
 		{
-			CP_Settings_Fill(CP_Color_Create(0, 0, 0, 255));
-			CP_Font_DrawText("GAME OVER", windowLength / 2.0f - 200.0f, windowHeight / 2.0f);
+			//CP_Settings_Fill(CP_Color_Create(255, 255, 255, 100));
+			//CP_Settings_RectMode(CP_POSITION_CENTER);
+			//CP_Graphics_DrawRect(windowLength / 2, windowHeight / 2, windowLength, windowHeight);
+
+			//CP_Settings_Fill(CP_Color_Create(0, 0, 0, 255));
+			//CP_Settings_TextSize(100.0f);
+			//CP_Settings_TextAlignment(CP_TEXT_ALIGN_H_CENTER, CP_TEXT_ALIGN_V_MIDDLE);
+			//CP_Font_DrawText("GAME OVER", windowLength / 2.0f, windowHeight / 2.0f);
 			GAMEOVER = 1;
 		}
 		else
@@ -467,10 +505,14 @@ void Game_Update(void)
 			HPBARHEALTH = knight.width;
 		}
 	}
+
 	//Draw the pause button in the top right corner of the screen.
-	CP_Settings_Fill(CP_Color_Create(0, 0, 0, 255));
+	CP_Settings_Fill(CP_Color_Create(130, 130, 130, 255));
 	CP_Settings_RectMode(CP_POSITION_CENTER);
 	CP_Graphics_DrawRect(50, 50, 50, 50);
+	CP_Settings_Fill(CP_Color_Create(0, 0, 0, 255));
+	CP_Settings_TextSize(30.0f);
+	CP_Font_DrawText("| |", 50, 50);
 
 	//Inventory Slot Selection
 	if (CP_Input_KeyTriggered(KEY_1)) { ClickedSlot = 1; }
@@ -483,13 +525,28 @@ void Game_Update(void)
 
 	for (int i = 1; i <= 3; i++) {
 		if (i == ClickedSlot) {
-			CP_Settings_Fill(CP_Color_Create(255, 255, 0, 255));
+			CP_Settings_Fill(CP_Color_Create(235, 255, 0, 255)); // yellow colour for the selected slot
 		}
 		else {
-			CP_Settings_Fill(CP_Color_Create(255, 255, 255, 255));
+			CP_Settings_Fill(CP_Color_Create(210, 125, 25, 255)); // brown colour for the other slots
 		}
-		CP_Graphics_DrawRect(windowLength / 2.0f + ((i - 2) * 60), windowHeight - 45, 50, 50);
+		CP_Graphics_DrawRect(windowLength / 2.0f + ((i - 2) * 120), windowHeight - 65, 100, 100);
 	}
+
+	CP_Image_Draw(sword, windowLength / 2.0f + ((-1) * 120), windowHeight - 65.0f, 60.0f, 91.0f, 255); // drawing sword in 1st inventory slot
+	CP_Image_Draw(bow, windowLength / 2, windowHeight - 65.0f, 60.0f, 91.0f, 255); // drawing bow in 2nd inventory slot
+	CP_Image_Draw(potion, windowLength / 2.0f + ((1) * 120), windowHeight - 65.0f, 86.0f, 86.0f, 255); // drawing health potion in 3rd inventory slot
+
+	// when slot 3 is selected and used
+	if (CP_Input_MouseTriggered(MOUSE_BUTTON_LEFT) && Paused == 0 && !IsAreaClicked(50, 50, 50, 50, CP_Input_GetMouseX(), CP_Input_GetMouseY()) && ClickedSlot == 3) {
+		if (HPBARHEALTH < knight.width) {
+			HPBARHEALTH += 10; // regains 10 hp
+		}
+		else if (HPBARHEALTH > knight.width) {
+			HPBARHEALTH == knight.width;
+		}
+	}
+
 	if (GameMode == 0) {
 		//Timer Progression Code
 		int totalSeconds = (int)(timer.timeLeft + 0.999f);
@@ -532,6 +589,11 @@ void Game_Update(void)
 
 	if (Paused == 1 && GAMEOVER == 0)
 	{
+		// drawing grey overlay
+		CP_Settings_Fill(CP_Color_Create(130, 130, 130, 100));
+		CP_Settings_RectMode(CP_POSITION_CENTER);
+		CP_Graphics_DrawRect(windowLength / 2, windowHeight / 2, windowLength, windowHeight);
+
 		CP_Settings_Fill(CP_Color_Create(0, 0, 0, 255));
 		CP_Settings_TextSize(100.0f);
 		CP_Settings_TextAlignment(CP_TEXT_ALIGN_H_CENTER, CP_TEXT_ALIGN_V_MIDDLE);
@@ -552,12 +614,20 @@ void Game_Update(void)
 		//Menu Button
 		CP_Settings_Fill(CP_Color_Create(255, 255, 255, 255));
 		CP_Settings_RectMode(CP_POSITION_CENTER);
-		CP_Graphics_DrawRect(windowLength / 2 + 300, windowHeight / 2 + 200, 200, 100);
+		CP_Graphics_DrawRect(windowLength / 2 + 300, windowHeight / 2 + 200, 230, 100);
+		CP_Settings_Fill(CP_Color_Create(0, 0, 0, 255));
+		CP_Settings_TextSize(50.0f);
+		CP_Settings_TextAlignment(CP_TEXT_ALIGN_H_CENTER, CP_TEXT_ALIGN_V_MIDDLE);
+		CP_Font_DrawText("MENU", windowLength / 2 + 300, windowHeight / 2 + 200);
 
 		//Resume Button
 		CP_Settings_Fill(CP_Color_Create(255, 255, 255, 255));
 		CP_Settings_RectMode(CP_POSITION_CENTER);
-		CP_Graphics_DrawRect(windowLength / 2 - 300, windowHeight / 2 + 200, 200, 100);
+		CP_Graphics_DrawRect(windowLength / 2 - 300, windowHeight / 2 + 200, 230, 100);
+		CP_Settings_Fill(CP_Color_Create(0, 0, 0, 255));
+		CP_Settings_TextSize(50.0f);
+		CP_Settings_TextAlignment(CP_TEXT_ALIGN_H_CENTER, CP_TEXT_ALIGN_V_MIDDLE);
+		CP_Font_DrawText("RESUME", windowLength / 2 - 300, windowHeight / 2 + 200);
 	}
 	//---------------------------------------------------------
 	// Generating Projectie
@@ -569,6 +639,43 @@ void Game_Update(void)
 	//CP_Graphics_DrawCircle(knight.x, knight.y, knight.size);
 	if (CP_Input_KeyDown(KEY_Q)) {
 		CP_Engine_SetNextGameState(Main_Menu_Init, Main_Menu_Update, Main_Menu_Exit);
+	}
+
+	if (GAMEOVER == 1) { // when player dies
+		Paused = 1; // pauses the game so the player has no inputs
+		CP_Sound_PauseAll(); // stops all audio in game
+
+		// drawing red overlay
+		CP_Settings_Fill(CP_Color_Create(255, 0, 0, 100));
+		CP_Settings_RectMode(CP_POSITION_CENTER);
+		CP_Graphics_DrawRect(windowLength / 2, windowHeight / 2, windowLength, windowHeight);
+
+		// game over text
+		CP_Settings_Fill(CP_Color_Create(0, 0, 0, 255));
+		CP_Settings_TextSize(100.0f);
+		CP_Settings_TextAlignment(CP_TEXT_ALIGN_H_CENTER, CP_TEXT_ALIGN_V_MIDDLE);
+		CP_Font_DrawText("GAME OVER", windowLength / 2.0f, windowHeight / 2.0f);
+
+		// reassurance over text
+		CP_Settings_Fill(CP_Color_Create(0, 0, 0, 255));
+		CP_Settings_TextSize(20.0f);
+		CP_Settings_TextAlignment(CP_TEXT_ALIGN_H_CENTER, CP_TEXT_ALIGN_V_MIDDLE);
+		CP_Font_DrawText("everybody makes mistakes...", windowLength / 2.0f, windowHeight / 2.0f + 60);
+
+		// menu button
+		CP_Settings_Fill(CP_Color_Create(255, 255, 255, 255));
+		CP_Settings_RectMode(CP_POSITION_CENTER);
+		CP_Graphics_DrawRect(windowLength / 2, windowHeight / 2 + 200, 230, 100);
+		CP_Settings_Fill(CP_Color_Create(0, 0, 0, 255));
+		CP_Settings_TextSize(50.0f);
+		CP_Settings_TextAlignment(CP_TEXT_ALIGN_H_CENTER, CP_TEXT_ALIGN_V_MIDDLE);
+		CP_Font_DrawText("MENU", windowLength / 2, windowHeight / 2 + 200);
+
+		// same logic as menu button previosuly
+		if (IsAreaClicked(windowLength / 2, windowHeight / 2 + 200, 200, 100, CP_Input_GetMouseX(), CP_Input_GetMouseY()))
+		{
+			CP_Engine_SetNextGameState(Main_Menu_Init, Main_Menu_Update, Main_Menu_Exit);
+		}
 	}
 }
 
