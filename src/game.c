@@ -65,10 +65,12 @@ void Game_Init(void)
 {
     knight.x = 800.0f;
     knight.y = 450.0f;
-    knight.speed = 200.0f;
+    knight.speed = 210.0f;
     knight.state = IDLE;
 	knight.width = 50;
 	knight.height = 60;
+	knight.iFrame = 0;
+	knight.iFrameTimer = 0.0f;
 
 	dummy.x = random_range(100, 1500);
 	dummy.y = random_range(100, 600);
@@ -192,28 +194,30 @@ void Game_Update(void)
 	//---------------------------------------------------------
     // Player's Control
 	if (GAMEOVER != 1 && Paused == 0) {
+		float move_x = 0, move_y = 0;
+		if (CP_Input_KeyDown(KEY_A))
+		{
+			move_x -= 1.0f; moving = 1; knight.is_right = 0;
+		}
+		if (CP_Input_KeyDown(KEY_D))
+		{
+			move_x += 1.0f; moving = 1; knight.is_right = 1;
+		}
 		if (CP_Input_KeyDown(KEY_W))
 		{
-			knight.y -= knight.speed * dt;
-			moving = 1;
+			move_y -= 1.0f; moving = 1;
 		}
 		if (CP_Input_KeyDown(KEY_S))
 		{
-			knight.y += knight.speed * dt;
-			moving = 1;
+			move_y += 1.0f; moving = 1;
 		}
-		if (CP_Input_KeyDown(KEY_A))
+		if (move_x != 0.0f || move_y != 0.0f)
 		{
-			knight.x -= knight.speed * dt;
-			knight.is_right = 0;
-			moving = 1;
-		}
-		if
-			(CP_Input_KeyDown(KEY_D))
-		{
-			knight.x += knight.speed * dt;
-			knight.is_right = 1;
-			moving = 1;
+			float length = sqrtf((move_x * move_x) + (move_y * move_y));
+			float unit_x = move_x / length;
+			float unit_y = move_y / length;
+			knight.x += unit_x * knight.speed * dt;
+			knight.y += unit_y * knight.speed * dt;
 		}
 	}
 	//---------------------------------------------------------------------
@@ -263,30 +267,39 @@ void Game_Update(void)
 	float mouseY = CP_Input_GetMouseY();
 
 	// when slot 2 is selected and used
-	if (CP_Input_MouseTriggered(MOUSE_BUTTON_LEFT) && Paused == 0 && !IsAreaClicked(50, 50, 50, 50, CP_Input_GetMouseX(), CP_Input_GetMouseY()) && ClickedSlot == 2) {
-		for (int i = 0; i < MAX_BULLETS; i++) {
-			if (bullets[i].state == 0) {
-				// Find the Vector between Player and Mouse
-				Vec_X = mouseX - knight.x;
-				Vec_Y = mouseY - knight.y;
-				// Calculate the Euclidean distance using Pythagoras Theorem
-				dist = sqrtf((Vec_X * Vec_X) + (Vec_Y * Vec_Y));
-				// Normalize the Vector
-				Norm_X = Vec_X / dist;
-				Norm_Y = Vec_Y / dist;
-				// Bullet comes from knight xy coords
-				bullets[i].x = knight.x;
-				bullets[i].y = knight.y;
-				// Bullet speed
-				bullets[i].speed_x = Norm_X * 450.0f;
-				bullets[i].speed_y = Norm_Y * 450.0f;
-				// Calculate and store the value of the direction the bullet is facing
-				bullets[i].angle = CP_Math_Degrees(atan2f(Vec_Y, Vec_X));
-				bullets[i].size = 15.0f; // Size
-				bullets[i].state = 1; // Active State
-				CP_Sound_Play(bowarrow);
-				break;
+	if (knight.state != ATTACK && ClickedSlot == 2)
+	{
+		if (CP_Input_MouseTriggered(MOUSE_BUTTON_LEFT) && Paused == 0 && !IsAreaClicked(50, 50, 50, 50, CP_Input_GetMouseX(), CP_Input_GetMouseY())) {
+			for (int i = 0; i < MAX_BULLETS; i++) {
+				if (bullets[i].state == 0) {
+					// Find the Vector between Player and Mouse
+					Vec_X = mouseX - knight.x;
+					Vec_Y = mouseY - knight.y;
+					// Calculate the Euclidean distance using Pythagoras Theorem
+					dist = sqrtf((Vec_X * Vec_X) + (Vec_Y * Vec_Y));
+					// Normalize the Vector
+					Norm_X = Vec_X / dist;
+					Norm_Y = Vec_Y / dist;
+					// Bullet comes from knight xy coords
+					bullets[i].x = knight.x;
+					bullets[i].y = knight.y;
+					bullets[i].start_x = knight.x;
+					bullets[i].start_y = knight.y;
+					// Bullet speed
+					bullets[i].speed_x = Norm_X * 450.0f;
+					bullets[i].speed_y = Norm_Y * 450.0f;
+					// Calculate and store the value of the direction the bullet is facing
+					bullets[i].angle = CP_Math_Degrees(atan2f(Vec_Y, Vec_X));
+					bullets[i].size = 15.0f; // Size
+					bullets[i].state = 1; // Active State
+					CP_Sound_Play(bowarrow);
+					break;
+				}
 			}
+		}
+		else
+		{
+			knight.state = moving ? RUN : IDLE;
 		}
 	}
 	for (int i = 0; i < MAX_BULLETS; i++) {
@@ -376,8 +389,8 @@ void Game_Update(void)
 		dummy.chase = 0;
 	}
 	if (dummy.chase == 1 && GAMEOVER != 1) {
-		dummy.x += (NVDP_X * 200.0f) * dt;
-		dummy.y += (NVDP_Y * 200.0f) * dt;
+		dummy.x += (NVDP_X * 180.0f) * dt;
+		dummy.y += (NVDP_Y * 180.0f) * dt;
 	}
 	if (dummy.counter != 0) {
 		dummy.state = dummy.chase == 1 ? RUN : IDLE;
@@ -414,6 +427,18 @@ void Game_Update(void)
 		killcount.amount++;
 	}
 
+	//Testing dummy respawn
+	if (dummy.dead == 1 && killcount.amount != 10) {
+		dummy.dead = 0;
+		do {
+			dummy.x = random_range(100, 1500);
+			dummy.y = random_range(100, 600);
+			// Calculate the Euclidean distance using Pythagoras Theorem
+			VDP_dist = sqrtf(euclidean_distance(knight.x, knight.y, dummy.x, dummy.y));
+		} while (VDP_dist <= 250.0f);
+		dummy.counter = 10;
+	}
+
 	//If Pause is clicked, pause the game first and stop everything.
 	if (IsAreaClicked(50, 50, 50, 50, CP_Input_GetMouseX(), CP_Input_GetMouseY()) || CP_Input_KeyTriggered(KEY_ESCAPE))
 	{
@@ -428,16 +453,27 @@ void Game_Update(void)
 	}
 	//If Player and Dummy collide, lose a life and reset player position.
 	//if (IsSquareCircleColliding(dummy.x, dummy.y, dummy.width, dummy.height, knight.x, knight.y, knight.size / 2.0f) && dummy.counter != 0 && Paused == 0)
-	if (IsSquareColliding2(dummy.x, dummy.y, dummy.width, dummy.height,knight.x, knight.y, knight.width, knight.height) && dummy.counter != 0 && Paused == 0) {
+	if (IsSquareColliding2(dummy.x, dummy.y, dummy.width, dummy.height,knight.x, knight.y, knight.width, knight.height) && dummy.counter != 0 && Paused == 0 && knight.iFrame == 0 && GAMEOVER != 1) {
 		// Handle collision
-		HPBARHEALTH -= 0.10f;
+		HPBARHEALTH -= 5.0f;
 		hitTimer = 0.15f;
 		CP_Sound_Play(player_damage);
 		if (HPBARHEALTH < 0) {
 			HPBARHEALTH = 0;
 		}
+		knight.iFrame = 1;
+		knight.iFrameTimer = 1.0f;
 		if (ClickedSlot == 1 && CP_Input_MouseTriggered(MOUSE_BUTTON_LEFT)){ // if player and enemy collide, and player uses melee attack
 			dummy.counter -= 1; // enemy taking damage
+		}
+	}
+	if (knight.iFrame == 1) {
+		if (knight.iFrameTimer != 0) {
+			knight.iFrameTimer -= dt;
+		}
+		if (knight.iFrameTimer <= 0.0f) {
+			knight.iFrame = 0;
+			knight.iFrameTimer = 0.0f;
 		}
 	}
 	//If Player and SpeedBoost collide, gain a speed boost for 5 seconds.
@@ -632,6 +668,11 @@ void Game_Update(void)
 	//---------------------------------------------------------
 	// Generating Projectie
 	for (int i = 0; i < MAX_BULLETS; i++) {
+		dist = euclidean_distance(bullets[i].x, bullets[i].y, bullets[i].start_x, bullets[i].start_y);
+		float max = MAX_BULLET_DISTANCE * MAX_BULLET_DISTANCE;
+		if (dist >= max) {
+			bullets[i].state = 0;
+		}
 		if (bullets[i].state == 1) {
 			CP_Image_DrawSubImageAdvanced(arrow, bullets[i].x, bullets[i].y, 32, 32, 32, 0, 48, 16, 255, bullets[i].angle);
 		}
@@ -643,7 +684,7 @@ void Game_Update(void)
 
 	if (GAMEOVER == 1) { // when player dies
 		Paused = 1; // pauses the game so the player has no inputs
-		CP_Sound_PauseAll(); // stops all audio in game
+		//CP_Sound_PauseAll(); // stops all audio in game
 
 		// drawing red overlay
 		CP_Settings_Fill(CP_Color_Create(255, 0, 0, 100));

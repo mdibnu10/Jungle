@@ -12,6 +12,7 @@
 #define MAPS_PER_LEVEL 3
 #define MAX_OBSTACLE 3
 #define MAX_BULLETS 5
+#define MAX_BULLET_DISTANCE 280.0f
 
 void Game_Init(void);
 
@@ -34,6 +35,8 @@ typedef struct {
 	float angle;
 	float speed_x;
 	float speed_y;
+	float start_x;
+	float start_y;
 } Bullet;
 
 typedef struct {
