@@ -17,7 +17,7 @@
 #include <math.h>
 
 Player knight;
-CP_Image bg, arrow;
+CP_Image bg, arrow, bg2;
 Enemy dummy;
 float Vec_X, Vec_Y, dist, Norm_X, Norm_Y, VDP_X, VDP_Y, VDP_dist, NVDP_X, NVDP_Y;
 
@@ -25,11 +25,11 @@ Bullet bullets[MAX_BULLETS];
 char text[100];
 CP_Font font_menu = NULL;
 
-Obstacle obstacle[3];
-float Obs_X[MAX_OBSTACLE] = { 400, 200, 1200 };
-float Obs_Y[MAX_OBSTACLE] = { 200, 700, 600 };
-float Obs_W[MAX_OBSTACLE] = { 30, 60, 90 };
-float Obs_H[MAX_OBSTACLE] = { 40, 80, 160 };
+Obstacle obstacle[12];
+float Obs_X[MAX_OBSTACLE] = { 1216.13f, 1072.00f, 351.88f, 688.33f, 1488, 672.06f, 272.13f, 352.00f, 895.82f, 687.95f, 1184.00f, 1215.75f};
+float Obs_Y[MAX_OBSTACLE] = { 144.00f, 248.19f, 464.00f, 208, 232.25f, 464.06f, 784.13f, 231.91f, 408.36f, 600.00f, 600.14f, 784.00f};
+float Obs_W[MAX_OBSTACLE] = { 64.25f, 32.75, 64.25f, 64.67f, 32.5f, 64.375f, 64.75f, 32.36f, 32, 32.09f, 32.36f, 64.5f};
+float Obs_H[MAX_OBSTACLE] = { 32.5f, 16.125f, 32, 32.67f, 16.5f, 32.125f, 32.25f, 15.82f, 16, 16, 16.09f, 32.5f};
 
 //---------------------------------------------------------
 //Darrel
@@ -90,13 +90,24 @@ void Game_Init(void)
 	Norm_X = 0.0f;
 	Norm_Y = 0.0f;
 
-    bg = CP_Image_Load(maps[current_level][random[current_level]].image_path);
+	bg = CP_Image_Load(maps[current_level][random[current_level]].image_path);
+	if ((maps[current_level][random[current_level]].obstacle_path) != NULL)
+	{
+		bg2 = CP_Image_Load((maps[current_level][random[current_level]].obstacle_path));
+	}
+	else
+	{
+	
+	bg2 = NULL;
+	}
+	int rac = random[current_level];
 	arrow = CP_Image_Load("Assets/Arrow.png");
     Anim_Init(&knight.idle, "Assets/Knight_Idle.png", 120, 80, 0.12f, 1);
     Anim_Init(&knight.run, "Assets/Knight_Run.png", 120, 80, 0.12f, 1);
     Anim_Init(&knight.attack, "Assets/Knight_Attack.png", 120, 80, 0.10f, 0);
-	Anim_Init(&dummy.idle, "Assets/RP_Idle.png", 32, 32, 0.12f, 1);
-	Anim_Init(&dummy.run, "Assets/RP_Run.png", 32, 32, 0.12f, 1);
+	Anim_Init(&dummy.idle, "Assets/Bear_Idle.png", 32, 32, 0.12f, 1);
+	Anim_Init(&dummy.run, "Assets/Bear_Run.png", 32, 32, 0.12f, 1);
+	Anim_Init(&dummy.attack, "Assets/Bear_Attack.png", 32, 32, 0.10f, 0);
 
 	font_menu = CP_Font_Load("./Assets/Dalek.ttf");
 	CP_Font_Set(font_menu); //set the font used
@@ -104,12 +115,15 @@ void Game_Init(void)
 	CP_Settings_RectMode(CP_POSITION_CENTER);
 	CP_Settings_EllipseMode(CP_POSITION_CENTER);
 
-	// Obstacle Values
-	for (int i = 0; i < MAX_OBSTACLE; i++) {
-		obstacle[i].x = Obs_X[i];
-		obstacle[i].y = Obs_Y[i];
-		obstacle[i].width = Obs_W[i];
-		obstacle[i].height = Obs_H[i];
+	// Obstacle Values based on one map only for testing
+	if (bg2 != NULL)
+	{
+		for (int i = 0; i < MAX_OBSTACLE; i++) {
+			obstacle[i].x = Obs_X[i];
+			obstacle[i].y = Obs_Y[i];
+			obstacle[i].width = Obs_W[i];
+			obstacle[i].height = Obs_H[i];
+		}
 	}
 
 	// Preset bullet state, inactive
@@ -258,7 +272,7 @@ void Game_Update(void)
         {
 			knight.state = IDLE;
         }
-        Anim_Draw(&knight.attack, knight.x, knight.y, draw_width, 100);
+        Anim_Draw(&knight.attack, knight.x, knight.y - knight.height / 2.0f, draw_width, 120);
         break;
     }
 	draw_width = knight.is_right == 1 ? 110 : -110;
@@ -382,32 +396,56 @@ void Game_Update(void)
 		NVDP_X = VDP_X / VDP_dist;
 		NVDP_Y = VDP_Y / VDP_dist;
 	}
+
+	int touching = IsSquareColliding2(dummy.x, dummy.y, dummy.width, dummy.height,
+		knight.x, knight.y, knight.width, knight.height);
 	if (VDP_dist <= 300 && dummy.counter != 0 && Paused != 1) {
 		dummy.chase = 1;
 	}
 	else {
 		dummy.chase = 0;
 	}
-	if (dummy.chase == 1 && GAMEOVER != 1) {
+
+	// only chase when not in collision
+	if (dummy.chase == 1 && !touching && dummy.state != ATTACK && GAMEOVER != 1) {
 		dummy.x += (NVDP_X * 180.0f) * dt;
 		dummy.y += (NVDP_Y * 180.0f) * dt;
+
 	}
-	if (dummy.counter != 0) {
-		dummy.state = dummy.chase == 1 ? RUN : IDLE;
-		// check if player is on which side of the enemy
+	if (dummy.counter != 0) 
+	{
+		if (dummy.state != ATTACK)
+		{
+			dummy.state = (dummy.chase == 1 && !touching) ? RUN : IDLE;
+		}
 		dummy.is_right = knight.x > dummy.x ? 1 : 0;
-		// turns right if enemy is on the right
 		draw_width = dummy.is_right == 1 ? 80 : -80;
+	
+		//if (dummy.state != ATTACK) {
+		//	dummy.state = dummy.chase == 1 ? RUN : IDLE;
+		//}
+		//// check if player is on which side of the enemy
+		//dummy.is_right = knight.x > dummy.x ? 1 : 0;
+		//// turns right if enemy is on the right
+		//draw_width = dummy.is_right == 1 ? 80 : -80;
 
 		switch (dummy.state)
 		{
 		case IDLE:
 			Anim_Update(&dummy.idle, dt);
-			Anim_Draw(&dummy.idle, dummy.x, dummy.y - dummy.height / 2.0f, draw_width, 80);
+			Anim_Draw(&dummy.idle, dummy.x, dummy.y - dummy.height / 2, draw_width, 80);
 			break;
 		case RUN:
 			Anim_Update(&dummy.run, dt);
-			Anim_Draw(&dummy.run, dummy.x, dummy.y, draw_width, 80);
+			Anim_Draw(&dummy.run, dummy.x, dummy.y - dummy.height / 2, draw_width, 80);
+			break;
+		case ATTACK:
+			if (Anim_Update(&dummy.attack, dt))
+			{
+				dummy.state = IDLE;
+			}
+			Anim_Draw(&dummy.attack, dummy.x, dummy.y - dummy.height / 2, draw_width, 80);
+			break;
 		}
 		CP_Settings_Fill(CP_Color_Create(0, 0, 0, 255));
 		snprintf(text, sizeof(text), "%d", dummy.counter);
@@ -453,7 +491,10 @@ void Game_Update(void)
 	}
 	//If Player and Dummy collide, lose a life and reset player position.
 	//if (IsSquareCircleColliding(dummy.x, dummy.y, dummy.width, dummy.height, knight.x, knight.y, knight.size / 2.0f) && dummy.counter != 0 && Paused == 0)
+
 	if (IsSquareColliding2(dummy.x, dummy.y, dummy.width, dummy.height,knight.x, knight.y, knight.width, knight.height) && dummy.counter != 0 && Paused == 0 && knight.iFrame == 0 && GAMEOVER != 1) {
+		dummy.state = ATTACK;
+		Anim_Reset(&dummy.attack);
 		// Handle collision
 		HPBARHEALTH -= 5.0f;
 		hitTimer = 0.15f;
@@ -680,6 +721,14 @@ void Game_Update(void)
 	//CP_Graphics_DrawCircle(knight.x, knight.y, knight.size);
 	if (CP_Input_KeyDown(KEY_Q)) {
 		CP_Engine_SetNextGameState(Main_Menu_Init, Main_Menu_Update, Main_Menu_Exit);
+	}
+
+
+	CP_Settings_ImageMode(CP_POSITION_CORNER);
+	
+	if (bg2 != NULL)
+	{
+		CP_Image_Draw(bg2, 0, 0, windowLength, windowHeight, 255);
 	}
 
 	if (GAMEOVER == 1) { // when player dies
