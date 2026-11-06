@@ -25,11 +25,11 @@ Bullet bullets[MAX_BULLETS];
 char text[100];
 CP_Font font_menu = NULL;
 
-Obstacle obstacle[5];
-float Obs_X[MAX_OBSTACLE] = { 400, 200, 1200, 688.3f, 1488};
-float Obs_Y[MAX_OBSTACLE] = { 200, 700, 600, 207.99f, 232.5f};
-float Obs_W[MAX_OBSTACLE] = { 30, 60, 90, 64.66f, 32.5f};
-float Obs_H[MAX_OBSTACLE] = { 40, 80, 160, 32.66f, 16.5f};
+Obstacle obstacle[12];
+float Obs_X[MAX_OBSTACLE] = { 1216.13f, 1072.00f, 351.88f, 688.33f, 1488, 672.06f, 272.13f, 352.00f, 895.82f, 687.95f, 1184.00f, 1215.75f};
+float Obs_Y[MAX_OBSTACLE] = { 144.00f, 248.19f, 464.00f, 208, 232.25f, 464.06f, 784.13f, 231.91f, 408.36f, 600.00f, 600.14f, 784.00f};
+float Obs_W[MAX_OBSTACLE] = { 64.25f, 32.75, 64.25f, 64.67f, 32.5f, 64.375f, 64.75f, 32.36f, 32, 32.09f, 32.36f, 64.5f};
+float Obs_H[MAX_OBSTACLE] = { 32.5f, 16.125f, 32, 32.67f, 16.5f, 32.125f, 32.25f, 15.82f, 16, 16, 16.09f, 32.5f};
 
 //---------------------------------------------------------
 //Darrel
@@ -106,12 +106,15 @@ void Game_Init(void)
 	CP_Settings_RectMode(CP_POSITION_CENTER);
 	CP_Settings_EllipseMode(CP_POSITION_CENTER);
 
-	// Obstacle Values
-	for (int i = 0; i < MAX_OBSTACLE; i++) {
-		obstacle[i].x = Obs_X[i];
-		obstacle[i].y = Obs_Y[i];
-		obstacle[i].width = Obs_W[i];
-		obstacle[i].height = Obs_H[i];
+	// Obstacle Values based on one map only for testing
+	if (bg2 != NULL)
+	{
+		for (int i = 0; i < MAX_OBSTACLE; i++) {
+			obstacle[i].x = Obs_X[i];
+			obstacle[i].y = Obs_Y[i];
+			obstacle[i].width = Obs_W[i];
+			obstacle[i].height = Obs_H[i];
+		}
 	}
 
 	// Preset bullet state, inactive

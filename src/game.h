@@ -10,7 +10,7 @@
 //---------------------------------------------------------
 #define LEVELS 3
 #define MAPS_PER_LEVEL 3
-#define MAX_OBSTACLE 5
+#define MAX_OBSTACLE 12
 #define MAX_BULLETS 5
 
 void Game_Init(void);
