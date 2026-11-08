@@ -153,3 +153,12 @@ unsigned int random_range(unsigned int min, unsigned int max)
 {
 	return min + rand() % (max - min + 1);
 }
+
+void SpawnBoost(BoostType* type, float* x, float* y, int* collected, float* timer, float windowW, float windowH)
+{
+	*type = random_range(0, BOOST_COUNT - 1);
+	*x = random_range(100, (unsigned int)(windowW - 100));
+	*y = random_range(130, (unsigned int)(windowH - 180));
+	*collected = 0;
+	*timer = 25.0f;
+}
