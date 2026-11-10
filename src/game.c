@@ -460,6 +460,7 @@ void Game_Update(void)
 	if (dummy.chase == 1 && !touching && dummy.state != ATTACK && GAMEOVER != 1) {
 		dummy.x += (NVDP_X * 180.0f) * dt;
 		dummy.y += (NVDP_Y * 180.0f) * dt;
+
 	}
 	if (dummy.counter != 0)
 	{
@@ -469,6 +470,14 @@ void Game_Update(void)
 		}
 		dummy.is_right = knight.x > dummy.x ? 1 : 0;
 		draw_width = dummy.is_right == 1 ? 80 : -80;
+	
+		//if (dummy.state != ATTACK) {
+		//	dummy.state = dummy.chase == 1 ? RUN : IDLE;
+		//}
+		//// check if player is on which side of the enemy
+		//dummy.is_right = knight.x > dummy.x ? 1 : 0;
+		//// turns right if enemy is on the right
+		//draw_width = dummy.is_right == 1 ? 80 : -80;
 
 		switch (dummy.state)
 		{
