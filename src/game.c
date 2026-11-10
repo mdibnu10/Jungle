@@ -727,7 +727,7 @@ void Game_Update(void)
 			HPBARHEALTH += 10; // regains 10 hp
 		}
 		else if (HPBARHEALTH > knight.width) {
-			HPBARHEALTH == knight.width;
+			HPBARHEALTH = knight.width;
 		}
 	}
 
