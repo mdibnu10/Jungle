@@ -17,13 +17,15 @@
 #include <math.h>
 
 Player knight;
-CP_Image bg, arrow;
+CP_Image bg, arrow, bg2;
 Enemy dummy;
 float Vec_X, Vec_Y, dist, Norm_X, Norm_Y, VDP_X, VDP_Y, VDP_dist, NVDP_X, NVDP_Y;
 
 Bullet bullets[MAX_BULLETS];
 char text[100];
 CP_Font font_menu = NULL;
+
+
 
 Obstacle obstacle[3];
 float Obs_X[MAX_OBSTACLE] = { 400, 200, 1200 };
