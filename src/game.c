@@ -17,7 +17,7 @@
 #include <math.h>
 
 Player knight;
-CP_Image bg, arrow, bg2;
+CP_Image bg, arrow;
 Enemy dummy;
 float Vec_X, Vec_Y, dist, Norm_X, Norm_Y, VDP_X, VDP_Y, VDP_dist, NVDP_X, NVDP_Y;
 
@@ -25,17 +25,15 @@ Bullet bullets[MAX_BULLETS];
 char text[100];
 CP_Font font_menu = NULL;
 
-Obstacle obstacle[12];
-float Obs_X[MAX_OBSTACLE] = { 1216.13f, 1072.00f, 351.88f, 688.33f, 1488, 672.06f, 272.13f, 352.00f, 895.82f, 687.95f, 1184.00f, 1215.75f };
-float Obs_Y[MAX_OBSTACLE] = { 144.00f, 248.19f, 464.00f, 208, 232.25f, 464.06f, 784.13f, 231.91f, 408.36f, 600.00f, 600.14f, 784.00f };
-float Obs_W[MAX_OBSTACLE] = { 64.25f, 32.75, 64.25f, 64.67f, 32.5f, 64.375f, 64.75f, 32.36f, 32, 32.09f, 32.36f, 64.5f };
-float Obs_H[MAX_OBSTACLE] = { 32.5f, 16.125f, 32, 32.67f, 16.5f, 32.125f, 32.25f, 15.82f, 16, 16, 16.09f, 32.5f };
+Obstacle obstacle[3];
+float Obs_X[MAX_OBSTACLE] = { 400, 200, 1200 };
+float Obs_Y[MAX_OBSTACLE] = { 200, 700, 600 };
+float Obs_W[MAX_OBSTACLE] = { 30, 60, 90 };
+float Obs_H[MAX_OBSTACLE] = { 40, 80, 160 };
 
 //---------------------------------------------------------
 //Darrel
 //---------------------------------------------------------
-Effects effects;
-SpeedBoost speedboost;
 Timer timer;
 KillCount killcount;
 
@@ -48,6 +46,27 @@ float hitTimer = 0.0f;
 int ClickedSlot = 1;
 int Paused = 0;
 int GameMode = 0; //0 = Time-Based, 1 = Kill-Based
+
+// ++ Darrell's Boost Spawn Variables +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+BoostType boostType;
+float x;
+float y;
+int boostCollected = 0;
+
+float enemyDmg; //How much damage the enemy is dealing
+float enemyDmgMultiplier; //Dmg Multiplier
+
+int DummyDmgTaken;
+float boostSpawnTimer;
+
+float boostWidth;
+float boothHeight;
+
+Effect effects[BOOST_COUNT];
+// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
 //---------------------------------------------------------
 float ObsminX, ObsmaxX, ObsminY, ObsmaxY;
 float KnightminX, KnightmaxX, KnightminY, KnightmaxY;
@@ -63,10 +82,35 @@ CP_Image bow, sword, potion;
 
 void Game_Init(void)
 {
-    knight.x = 800.0f;
-    knight.y = 450.0f;
-    knight.speed = 210.0f;
-    knight.state = IDLE;
+	// ++ Darrell's Boost Variables +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+	boostType = random_range(0, BOOST_COUNT - 1);
+	x = random_range(100, 1500);
+	y = random_range(100, 600);
+	boostCollected = 0;
+	boostSpawnTimer = 5.0f;
+
+	//Enemy Damage by %
+	enemyDmgMultiplier = 15.0f; // Adjust this multiplier to change the enemy's damage, more MAX HP = Lesser damage
+	enemyDmg = (knight.width * (enemyDmgMultiplier / 100));
+
+	//Dummy Damage Taken
+	DummyDmgTaken = 1;
+
+	//Boost Sizing
+	boostWidth = 70.0f;
+	boothHeight = 70.0f;
+
+	SpawnBoost(&boostType, &x, &y, &boostCollected, &boostSpawnTimer,
+		CP_System_GetWindowWidth(), CP_System_GetWindowHeight());
+
+	// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+	knight.x = 800.0f;
+	knight.y = 450.0f;
+	knight.speed = 210.0f;
+	knight.state = IDLE;
 	knight.width = 50;
 	knight.height = 60;
 	knight.iFrame = 0;
@@ -91,15 +135,12 @@ void Game_Init(void)
 	Norm_Y = 0.0f;
 
 	bg = CP_Image_Load(maps[current_level][random[current_level]].image_path);
-
-
 	arrow = CP_Image_Load("Assets/Arrow.png");
-    Anim_Init(&knight.idle, "Assets/Knight_Idle.png", 120, 80, 0.12f, 1);
-    Anim_Init(&knight.run, "Assets/Knight_Run.png", 120, 80, 0.12f, 1);
-    Anim_Init(&knight.attack, "Assets/Knight_Attack.png", 120, 80, 0.10f, 0);
-	Anim_Init(&dummy.idle, "Assets/Bear_Idle.png", 32, 32, 0.12f, 1);
-	Anim_Init(&dummy.run, "Assets/Bear_Run.png", 32, 32, 0.12f, 1);
-	Anim_Init(&dummy.attack, "Assets/Bear_Attack.png", 32, 32, 0.10f, 0);
+	Anim_Init(&knight.idle, "Assets/Knight_Idle.png", 120, 80, 0.12f, 1);
+	Anim_Init(&knight.run, "Assets/Knight_Run.png", 120, 80, 0.12f, 1);
+	Anim_Init(&knight.attack, "Assets/Knight_Attack.png", 120, 80, 0.10f, 0);
+	Anim_Init(&dummy.idle, "Assets/RP_Idle.png", 32, 32, 0.12f, 1);
+	Anim_Init(&dummy.run, "Assets/RP_Run.png", 32, 32, 0.12f, 1);
 
 	font_menu = CP_Font_Load("./Assets/Dalek.ttf");
 	CP_Font_Set(font_menu); //set the font used
@@ -107,15 +148,12 @@ void Game_Init(void)
 	CP_Settings_RectMode(CP_POSITION_CENTER);
 	CP_Settings_EllipseMode(CP_POSITION_CENTER);
 
-	// Obstacle Values based on one map only for testing
-	if (bg2 != NULL)
-	{
-		for (int i = 0; i < MAX_OBSTACLE; i++) {
-			obstacle[i].x = Obs_X[i];
-			obstacle[i].y = Obs_Y[i];
-			obstacle[i].width = Obs_W[i];
-			obstacle[i].height = Obs_H[i];
-		}
+	// Obstacle Values
+	for (int i = 0; i < MAX_OBSTACLE; i++) {
+		obstacle[i].x = Obs_X[i];
+		obstacle[i].y = Obs_Y[i];
+		obstacle[i].width = Obs_W[i];
+		obstacle[i].height = Obs_H[i];
 	}
 
 	// Preset bullet state, inactive
@@ -126,15 +164,22 @@ void Game_Init(void)
 	//---------------------------------------------------------
 	//Darrel
 	//---------------------------------------------------------
-	//SpeedBoost Values
-	speedboost.x = 100;
-	speedboost.y = 100;
-	speedboost.width = 30;
-	speedboost.height = 30;
-	speedboost.collected = 0;
 
 	//Effects Values
-	effects.noOfEffects = 1;
+	for (int i = 0; i < BOOST_COUNT; i++) {
+		effects[i].stacks = 0;
+	}
+	effects[SPEED_BOOST].color = CP_Color_Create(0, 255, 0, 255);   // green
+	effects[SPEED_BOOST].name = "Speed Boost";
+	effects[SPEED_BOOST].description = "Move faster.";
+
+	effects[MORE_MAXHP].color = CP_Color_Create(0, 0, 255, 255);   // blue
+	effects[MORE_MAXHP].name = "Toughness";
+	effects[MORE_MAXHP].description = "Enemies deal less damage.";
+
+	effects[DAMAGE_BOOST].color = CP_Color_Create(255, 0, 0, 255);   // red
+	effects[DAMAGE_BOOST].name = "Damage Boost";
+	effects[DAMAGE_BOOST].description = "You deal higher damage.";
 
 	//Pause Mode
 	Paused = 0;
@@ -177,28 +222,35 @@ void Game_Update(void)
 {
 	float windowLength = CP_System_GetWindowWidth();
 	float windowHeight = CP_System_GetWindowHeight();
-    CP_Graphics_ClearBackground(CP_Color_Create(80, 80, 80, 255));
-    CP_Settings_ImageMode(CP_POSITION_CORNER);
-    CP_Image_Draw(bg, 0, 0, windowLength, windowHeight, 255);
-    float dt = CP_System_GetDt();
+	CP_Graphics_ClearBackground(CP_Color_Create(80, 80, 80, 255));
+	CP_Settings_ImageMode(CP_POSITION_CORNER);
+	CP_Image_Draw(bg, 0, 0, windowLength, windowHeight, 255);
+	float dt = CP_System_GetDt();
 	float half_width = knight.width / 2.0f;
 	float half_height = knight.height / 2.0f;
-    int moving = 0;
+	int moving = 0;
 	//---------------------------------------------------------
 	//Darrel
 	//---------------------------------------------------------
 	if (hitTimer > 0.0f && Paused == 0) {
 		hitTimer -= dt;
 	}
-	if (GAMEOVER != 1 && Paused == 0 && timer.timeLeft > 0.0f) {
+	if (GameMode == 0 && GAMEOVER != 1 && Paused == 0 && timer.timeLeft > 0.0f) {
 		timer.timeLeft -= dt;
 		if (timer.timeLeft <= 0.0f) {
 			timer.timeLeft = 0.0f;
 			GAMEOVER = 1; // time's up
 		}
 	}
+
+	if (GAMEOVER != 1 && Paused == 0) {
+		boostSpawnTimer -= dt;
+		if (boostSpawnTimer <= 0.0f) {
+			SpawnBoost(&boostType, &x, &y, &boostCollected, &boostSpawnTimer, windowLength, windowHeight);
+		}
+	}
 	//---------------------------------------------------------
-    // Player's Control
+	// Player's Control
 	if (GAMEOVER != 1 && Paused == 0) {
 		float move_x = 0, move_y = 0;
 		if (CP_Input_KeyDown(KEY_A))
@@ -231,42 +283,42 @@ void Game_Update(void)
 	CP_Graphics_DrawRect(knight.x, knight.y, knight.width, knight.height);
 	CP_Graphics_DrawRect(dummy.x, dummy.y, dummy.width, dummy.height);
 	//---------------------------------------------------------------------
-    // decide the state (can't change state mid-attack)
-    if (knight.state != ATTACK && ClickedSlot == 1)
-    {
-        if (CP_Input_MouseTriggered(MOUSE_BUTTON_LEFT) && Paused != 1)
-        {
+	// decide the state (can't change state mid-attack)
+	if (knight.state != ATTACK && ClickedSlot == 1)
+	{
+		if (CP_Input_MouseTriggered(MOUSE_BUTTON_LEFT) && Paused != 1)
+		{
 			knight.state = ATTACK;
 			Anim_Reset(&knight.attack);
 			CP_Sound_Play(slash);
-        }
-        else
-        {
-        knight.state = moving ? RUN : IDLE;
-        }
-    }
+		}
+		else
+		{
+			knight.state = moving ? RUN : IDLE;
+		}
+	}
 	// reverse the image if player is moving left
-    float draw_width = knight.is_right == 1 ? 160 : -160;
-    
-    // draw image based on the player state
-    switch (knight.state)
-    {
-    case IDLE:
-        Anim_Update(&knight.idle, dt);
-        Anim_Draw(&knight.idle, knight.x, knight.y - knight.height / 2.0f, draw_width, 120);
-        break;
-    case RUN:
-        Anim_Update(&knight.run, dt);
-        Anim_Draw(&knight.run, knight.x, knight.y - knight.height / 2.0f, draw_width, 120);
-        break;
-    case ATTACK:
-        if (Anim_Update(&knight.attack, dt))
-        {
+	float draw_width = knight.is_right == 1 ? 160 : -160;
+
+	// draw image based on the player state
+	switch (knight.state)
+	{
+	case IDLE:
+		Anim_Update(&knight.idle, dt);
+		Anim_Draw(&knight.idle, knight.x, knight.y - knight.height / 2.0f, draw_width, 120);
+		break;
+	case RUN:
+		Anim_Update(&knight.run, dt);
+		Anim_Draw(&knight.run, knight.x, knight.y - knight.height / 2.0f, draw_width, 120);
+		break;
+	case ATTACK:
+		if (Anim_Update(&knight.attack, dt))
+		{
 			knight.state = IDLE;
-        }
-		Anim_Draw(&knight.attack, knight.x, knight.y - knight.height / 2.0f, draw_width, 120);
-        break;
-    }
+		}
+		Anim_Draw(&knight.attack, knight.x, knight.y, draw_width, 100);
+		break;
+	}
 	draw_width = knight.is_right == 1 ? 110 : -110;
 	/*------------------------------------------------------------------------------*/
 	float mouseX = CP_Input_GetMouseX();
@@ -323,7 +375,11 @@ void Game_Update(void)
 					bullets[i].x >= dummy.x - dummy.width / 2.0f &&
 					bullets[i].y <= dummy.y + dummy.height / 2.0f &&
 					bullets[i].y >= dummy.y - dummy.height / 2.0f) {
-					dummy.counter -= 1;
+					dummy.counter -= DummyDmgTaken;
+					if (dummy.counter < 0) {
+						dummy.counter = 0;
+					}
+					bullets[i].state = 0;
 					bullets[i].state = 0;
 				}
 			}
@@ -388,56 +444,32 @@ void Game_Update(void)
 		NVDP_X = VDP_X / VDP_dist;
 		NVDP_Y = VDP_Y / VDP_dist;
 	}
-
-	int touching = IsSquareColliding2(dummy.x, dummy.y, dummy.width, dummy.height,
-		knight.x, knight.y, knight.width, knight.height);
-
 	if (VDP_dist <= 300 && dummy.counter != 0 && Paused != 1) {
 		dummy.chase = 1;
 	}
 	else {
 		dummy.chase = 0;
 	}
-	// only chase when not in collision
-	if (dummy.chase == 1 && !touching && dummy.state != ATTACK && GAMEOVER != 1) {
+	if (dummy.chase == 1 && GAMEOVER != 1) {
 		dummy.x += (NVDP_X * 180.0f) * dt;
 		dummy.y += (NVDP_Y * 180.0f) * dt;
 	}
-	if (dummy.counter != 0)
-	{
-		if (dummy.state != ATTACK)
-		{
-			dummy.state = (dummy.chase == 1 && !touching) ? RUN : IDLE;
-		}
+	if (dummy.counter != 0) {
+		dummy.state = dummy.chase == 1 ? RUN : IDLE;
+		// check if player is on which side of the enemy
 		dummy.is_right = knight.x > dummy.x ? 1 : 0;
-		
+		// turns right if enemy is on the right
 		draw_width = dummy.is_right == 1 ? 80 : -80;
-
-		//if (dummy.state != ATTACK) {
-		//	dummy.state = dummy.chase == 1 ? RUN : IDLE;
-		//}
-		//// check if player is on which side of the enemy
-		//dummy.is_right = knight.x > dummy.x ? 1 : 0;
-		//// turns right if enemy is on the right
-		//draw_width = dummy.is_right == 1 ? 80 : -80;
 
 		switch (dummy.state)
 		{
 		case IDLE:
 			Anim_Update(&dummy.idle, dt);
-			Anim_Draw(&dummy.idle, dummy.x, dummy.y - dummy.height / 2, draw_width, 80);
+			Anim_Draw(&dummy.idle, dummy.x, dummy.y - dummy.height / 2.0f, draw_width, 80);
 			break;
 		case RUN:
 			Anim_Update(&dummy.run, dt);
-			Anim_Draw(&dummy.run, dummy.x, dummy.y - dummy.height / 2, draw_width, 80);
-			break;
-		case ATTACK:
-			if (Anim_Update(&dummy.attack, dt))
-			{
-				dummy.state = IDLE;
-			}
-			Anim_Draw(&dummy.attack, dummy.x, dummy.y - dummy.height / 2, draw_width, 80);
-			break;
+			Anim_Draw(&dummy.run, dummy.x, dummy.y, draw_width, 80);
 		}
 		CP_Settings_Fill(CP_Color_Create(0, 0, 0, 255));
 		snprintf(text, sizeof(text), "%d", dummy.counter);
@@ -483,11 +515,9 @@ void Game_Update(void)
 	}
 	//If Player and Dummy collide, lose a life and reset player position.
 	//if (IsSquareCircleColliding(dummy.x, dummy.y, dummy.width, dummy.height, knight.x, knight.y, knight.size / 2.0f) && dummy.counter != 0 && Paused == 0)
-	if (IsSquareColliding2(dummy.x, dummy.y, dummy.width, dummy.height,knight.x, knight.y, knight.width, knight.height) && dummy.counter != 0 && Paused == 0 && knight.iFrame == 0 && GAMEOVER != 1) {
-		dummy.state = ATTACK;
-		Anim_Reset(&dummy.attack);
+	if (IsSquareColliding2(dummy.x, dummy.y, dummy.width, dummy.height, knight.x, knight.y, knight.width, knight.height) && dummy.counter != 0 && Paused == 0 && knight.iFrame == 0 && GAMEOVER != 1) {
 		// Handle collision
-		HPBARHEALTH -= 5.0f;
+		HPBARHEALTH -= enemyDmg;
 		hitTimer = 0.15f;
 		CP_Sound_Play(player_damage);
 		if (HPBARHEALTH < 0) {
@@ -495,8 +525,11 @@ void Game_Update(void)
 		}
 		knight.iFrame = 1;
 		knight.iFrameTimer = 1.0f;
-		if (ClickedSlot == 1 && CP_Input_MouseTriggered(MOUSE_BUTTON_LEFT)){ // if player and enemy collide, and player uses melee attack
+		if (ClickedSlot == 1 && CP_Input_MouseTriggered(MOUSE_BUTTON_LEFT)) { // if player and enemy collide, and player uses melee attack
 			dummy.counter -= 1; // enemy taking damage
+			if (dummy.counter < 0) {
+				dummy.counter = 0;
+			}
 		}
 	}
 	if (knight.iFrame == 1) {
@@ -506,15 +539,6 @@ void Game_Update(void)
 		if (knight.iFrameTimer <= 0.0f) {
 			knight.iFrame = 0;
 			knight.iFrameTimer = 0.0f;
-		}
-	}
-	//If Player and SpeedBoost collide, gain a speed boost for 5 seconds.
-	if (speedboost.collected != 1) {
-		if (IsSquareColliding2(randomX, randomY, speedboost.width, speedboost.height, knight.x, knight.y, knight.width, knight.height))
-		{
-			knight.speed += 10.0f;
-			speedboost.collected = 1;
-			effects.noOfEffects += 1;
 		}
 	}
 
@@ -529,19 +553,111 @@ void Game_Update(void)
 	CP_Settings_RectMode(CP_POSITION_CORNER);
 	CP_Graphics_DrawRect(knight.x - (knight.width / 2.0f), knight.y + (knight.height / 2.0f + 10.0f), HPBARHEALTH, 10.0f);
 
-	//Draw Speed-Boost Power Up Bar
-	if (speedboost.collected == 0) {
-		CP_Settings_Fill(CP_Color_Create(0, 255, 255, 255));
-		CP_Graphics_DrawRect(randomX, randomY, 10.0f, 10.0f);
-	}
+	// ++ Darrell's Boost Spawn Variables +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-	//Draw the Effect Status Box
-	CP_Settings_Fill(CP_Color_Create(255, 0, 255, 255));
-	if (effects.noOfEffects > 0) {
-		for (int i = 0; i < effects.noOfEffects; i++) {
-			CP_Graphics_DrawCircle(windowLength - 95 - (i * 80), windowHeight - 60, 70);
+	if (boostCollected == 0) {
+		// Draw the boost (only while it hasn't been collected)
+		CP_Settings_RectMode(CP_POSITION_CENTER);   // match how the collision treats x,y
+		switch (boostType) {
+		case SPEED_BOOST:
+			CP_Settings_Fill(CP_Color_Create(0, 255, 0, 255)); //GREEN
+			break;
+		case MORE_MAXHP:
+			CP_Settings_Fill(CP_Color_Create(0, 0, 255, 255)); //BLUE
+			break;
+		case DAMAGE_BOOST:
+			CP_Settings_Fill(CP_Color_Create(255, 0, 0, 255)); //RED
+			break;
+		}
+		CP_Graphics_DrawRect(x, y, boostWidth, boothHeight);
+
+		// Pickup check
+		if (IsSquareColliding2(x, y, boostWidth, boothHeight, knight.x, knight.y, knight.width, knight.height))
+		{
+			switch (boostType) {
+			case SPEED_BOOST:
+				knight.speed += 20.0f;
+				break;
+			case MORE_MAXHP:
+				enemyDmgMultiplier -= 2.0f;
+				enemyDmg = knight.width * (enemyDmgMultiplier / 100.0f);
+				// your max HP effect here
+				break;
+			case DAMAGE_BOOST:
+				DummyDmgTaken += 1;
+				// your damage effect here
+				break;
+			}
+			effects[boostType].stacks += 1;
+			boostCollected = 1;
 		}
 	}
+
+	// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+
+	//Draw the Effect Status Icons + hover tooltip
+	int slot = 0;
+	int hovered = -1;
+	float hoverX = 0.0f, hoverY = 0.0f;
+
+	for (int i = 0; i < BOOST_COUNT; i++) {
+		if (effects[i].stacks > 0) {
+			float cx = windowLength - 95.0f - (slot * 80.0f);
+			float cy = windowHeight - 60.0f;
+
+			CP_Settings_Fill(effects[i].color);
+			CP_Graphics_DrawCircle(cx, cy, 70);
+
+			float dx = mouseX - cx; //For hovering over the effect icons 
+			float dy = mouseY - cy;
+			if ((dx * dx) + (dy * dy) <= 35.0f * 35.0f) {
+				hovered = i;
+				hoverX = cx;
+				hoverY = cy;
+			}
+			slot++;
+		}
+	}
+
+	if (hovered != -1) {
+		//Draw the box
+		float boxW = 300.0f;
+		float boxH = 120.0f;
+		float boxX = hoverX + 35.0f - boxW;
+		float boxY = hoverY - 35.0f - boxH - 10.0f;
+		if (boxX < 0.0f)
+		{
+			boxX = 0.0f; //In case it exceeds out
+		}
+
+		// Background box
+		CP_Settings_RectMode(CP_POSITION_CORNER);
+		CP_Settings_Fill(CP_Color_Create(20, 20, 20, 230));
+		CP_Graphics_DrawRect(boxX, boxY, boxW, boxH);
+
+		// Text
+		char buf[255];
+		CP_Settings_TextAlignment(CP_TEXT_ALIGN_H_LEFT, CP_TEXT_ALIGN_V_TOP);
+		CP_Settings_Fill(CP_Color_Create(255, 255, 255, 255));
+
+		CP_Settings_TextSize(30.0f);
+		CP_Font_DrawText(effects[hovered].name, boxX + 15.0f, boxY + 10.0f);
+
+		CP_Settings_TextSize(15.0f);
+		CP_Font_DrawText(effects[hovered].description, boxX + 15.0f, boxY + 50.0f);
+
+		snprintf(buf, sizeof(buf), "Stacks: x%d", effects[hovered].stacks);
+		CP_Font_DrawText(buf, boxX + 15.0f, boxY + 85.0f);
+
+		CP_Settings_TextAlignment(CP_TEXT_ALIGN_H_CENTER, CP_TEXT_ALIGN_V_MIDDLE);
+		CP_Settings_RectMode(CP_POSITION_CENTER);
+	}
+
+
+
+
 	//Draw the Heart as a a circle for now.
 	CP_Settings_Fill(CP_Color_Create(255, 70, 0, 255));
 	if (HPBARHEALTH != 0)
@@ -712,13 +828,6 @@ void Game_Update(void)
 	//CP_Graphics_DrawCircle(knight.x, knight.y, knight.size);
 	if (CP_Input_KeyDown(KEY_Q)) {
 		CP_Engine_SetNextGameState(Main_Menu_Init, Main_Menu_Update, Main_Menu_Exit);
-	}
-
-	CP_Settings_ImageMode(CP_POSITION_CORNER);
-
-	if (bg2 != NULL)
-	{
-		CP_Image_Draw(bg2, 0, 0, windowLength, windowHeight, 255);
 	}
 
 	if (GAMEOVER == 1) { // when player dies

@@ -8,9 +8,11 @@
 //
 // Copyright © 2026 DigiPen, All rights reserved.
 //---------------------------------------------------------
+#pragma once
+#define LEVELS 3
 #define LEVELS 3
 #define MAPS_PER_LEVEL 3
-#define MAX_OBSTACLE 12
+#define MAX_OBSTACLE 3
 #define MAX_BULLETS 5
 #define MAX_BULLET_DISTANCE 280.0f
 
@@ -23,8 +25,8 @@ void Game_Exit(void);
 typedef struct MapData
 {
 	const char* image_path;
-    CP_Image image;        
-  
+	CP_Image image;
+
 } MapData;
 
 typedef struct {
@@ -46,21 +48,13 @@ typedef struct {
 	float height;
 } Obstacle;
 //---------------------------------------------------------
-typedef struct {
-	float x;
-	float y;
-	float width;
-	float height;
-	int collected; // 0 not collected, 1 collected
-} SpeedBoost;
 
 typedef struct {
-	float x;
-	float y;
-	float width;
-	float height;
-	int noOfEffects;
-} Effects;
+	CP_Color color;
+	int stacks;
+	const char* name;
+	const char* description;
+} Effect;
 
 typedef enum
 {
