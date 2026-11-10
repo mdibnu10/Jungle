@@ -9,10 +9,11 @@
 // Copyright © 2026 DigiPen, All rights reserved.
 //---------------------------------------------------------
 #pragma once
-#define LEVELS 3
+#include "cprocessing.h"
+
 #define LEVELS 3
 #define MAPS_PER_LEVEL 3
-#define MAX_OBSTACLE 3
+#define MAX_OBSTACLE 12
 #define MAX_BULLETS 5
 #define MAX_BULLET_DISTANCE 280.0f
 
@@ -25,7 +26,7 @@ void Game_Exit(void);
 typedef struct MapData
 {
 	const char* image_path;
-	CP_Image image;
+	const char* obstacle_path;
 
 } MapData;
 
