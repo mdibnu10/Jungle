@@ -12,7 +12,7 @@
 #define LEVELS 3
 #define LEVELS 3
 #define MAPS_PER_LEVEL 3
-#define MAX_OBSTACLE 3
+#define MAX_OBSTACLE 12
 #define MAX_BULLETS 5
 #define MAX_BULLET_DISTANCE 280.0f
 
@@ -24,7 +24,7 @@ void Game_Exit(void);
 
 typedef struct MapData
 {
-    const char* image_path;
+	const char* obstacle_path;
     CP_Image image;        
   
 } MapData;
@@ -49,12 +49,19 @@ typedef struct {
 } Obstacle;
 //---------------------------------------------------------
 
-typedef struct {
-	CP_Color color;
-	int stacks;
-	const char* name;
-	const char* description;
+CP_Color color;
+int stacks;
+const char* name;
+const char* description;
 } Effect;
+
+typedef enum
+{
+	SPEED_BOOST,
+	MORE_MAXHP,
+	DAMAGE_BOOST,
+	BOOST_COUNT
+} BoostType;
 
 typedef enum
 {
