@@ -9,9 +9,6 @@
 // Copyright © 2026 DigiPen, All rights reserved.
 //---------------------------------------------------------
 
-#pragma once
-#include "game.h"
-
 
 int IsAreaClicked(float area_center_x, float area_center_y, float area_width, float area_height, float click_x, float click_y);
 
@@ -73,5 +70,3 @@ int IsSquareColliding2(float sq1x, float sq1y, float sq1w, float sq1h, float sq2
 
 int euclidean_distance(int x1, int y1, int x2, int y2);
 unsigned int random_range(unsigned int min, unsigned int max);
-
-void SpawnBoost(BoostType* type, float* x, float* y, int* collected, float* timer, float windowW, float windowH);
