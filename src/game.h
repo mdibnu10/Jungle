@@ -24,7 +24,7 @@ void Game_Exit(void);
 
 typedef struct MapData
 {
-	const char* obstacle_path;
+	const char* image_path;
     CP_Image image;        
   
 } MapData;
@@ -49,10 +49,11 @@ typedef struct {
 } Obstacle;
 //---------------------------------------------------------
 
-CP_Color color;
-int stacks;
-const char* name;
-const char* description;
+typedef struct {
+	CP_Color color;
+	int stacks;
+	const char* name;
+	const char* description;
 } Effect;
 
 typedef enum
