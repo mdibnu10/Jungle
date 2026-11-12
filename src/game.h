@@ -13,7 +13,7 @@
 
 #define LEVELS 3
 #define MAPS_PER_LEVEL 3
-#define MAX_OBSTACLE 12
+#define MAX_OBSTACLE 15
 #define MAX_BULLETS 5
 #define MAX_BULLET_DISTANCE 280.0f
 
@@ -27,7 +27,11 @@ typedef struct MapData
 {
 	const char* image_path;
 	const char* obstacle_path;
-
+	float* arr_x;
+	float* arr_y;
+	float* arr_w;
+	float* arr_h;
+	int size;
 } MapData;
 
 typedef struct {
@@ -83,6 +87,6 @@ typedef struct {
 } KillCount;
 //---------------------------------------------------------
 
-extern int random[LEVELS];
+extern int random_map[LEVELS];
 extern int current_level;
 extern MapData maps[LEVELS][MAPS_PER_LEVEL];
