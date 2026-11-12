@@ -16,6 +16,7 @@
 #include <stdio.h>
 #include <math.h>
 
+MapData* current_map;
 Player knight;
 CP_Image bg, arrow, bg2;
 Enemy dummy;
@@ -104,7 +105,7 @@ void Game_Init(void)
 	Norm_X = 0.0f;
 	Norm_Y = 0.0f;
 
-	MapData* current_map = &maps[current_level][random_map[current_level]];
+	current_map = &maps[current_level][random_map[current_level]];
 	max_obs = current_map->size;
 	bg = CP_Image_Load(current_map->image_path);
 	bg2 = CP_Image_Load(current_map->obstacle_path);
@@ -819,15 +820,28 @@ void Game_Update(void)
 			CP_Image_DrawSubImageAdvanced(arrow, bullets[i].x, bullets[i].y, 32, 32, 32, 0, 48, 16, 255, bullets[i].angle);
 		}
 	}
-	char buf[32];
-	sprintf_s(buf, sizeof(buf), "Level: %d", current_level);
-	CP_Settings_Fill(CP_Color_Create(255, 255, 255, 255));
-	CP_Font_DrawText(buf, 50, 50);
-	if (CP_Input_KeyTriggered(KEY_N)) {
-		current_level++;                                   // move to next level
-		CP_Engine_SetNextGameState(Game_Init, Game_Update, Game_Exit);
+
+	// CHI SHI
+	if (CP_Input_KeyTriggered(KEY_8))
+	{ 
+		random_map[current_level] = 0; CP_Engine_SetNextGameStateForced(Game_Init, Game_Update, Game_Exit);
+	}
+	if (CP_Input_KeyTriggered(KEY_9))
+	{ 
+		random_map[current_level] = 1; CP_Engine_SetNextGameStateForced(Game_Init, Game_Update, Game_Exit);
+	}
+	if (CP_Input_KeyTriggered(KEY_0))
+	{ 
+		random_map[current_level] = 2; CP_Engine_SetNextGameStateForced(Game_Init, Game_Update, Game_Exit);
+	}
+
+	// QUS EDIT THIS FOR NXT LVL
+	if (CP_Input_KeyTriggered(KEY_N) && current_level < LEVELS - 1) {
+		current_level++;
+		CP_Engine_SetNextGameStateForced(Game_Init, Game_Update, Game_Exit);
 	}
 	if (CP_Input_KeyDown(KEY_Q)) {
+		current_level = 0;
 		CP_Engine_SetNextGameState(Main_Menu_Init, Main_Menu_Update, Main_Menu_Exit);
 	}
 

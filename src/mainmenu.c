@@ -39,11 +39,9 @@ MapData maps[LEVELS][MAPS_PER_LEVEL] =
 	// Level 1: real maps
 	{ {"./Assets/A.png", "./Assets/obs1.png", mapA1_x, mapA1_y, mapA1_w, mapA1_h, 14}, {"./Assets/B.png", "./Assets/obs2.png", mapA2_x, mapA2_y, mapA2_w, mapA2_h, 15},
 	{"./Assets/C.png", "./Assets/obs3.png", mapA3_x, mapA3_y, mapA3_w, mapA3_h, 12}},
-
 	// Level 2: reuse lvl1 images for now as placeholders
-	{ {"./Assets/A.png", "./Assets/obs1.png", mapA1_x, mapA1_y, mapA1_w, mapA1_h, 14}, {"./Assets/B.png", "./Assets/obs2.png", mapA2_x, mapA2_y, mapA2_w, mapA2_h, 15},
-	{"./Assets/C.png", "./Assets/obs3.png", mapA3_x, mapA3_y, mapA3_w, mapA3_h, 12}},
-
+	{ {"./Assets/A.png", "./Assets/obs1.png"}, {"./Assets/B.png", "./Assets/obs2.png"},
+	{"./Assets/C.png", "./Assets/obs3.png"}},
 	// Level 3: same placeholders
 	{ {"./Assets/A.png"}, {"./Assets/B.png"}, {"./Assets/C.png"} },
 };
