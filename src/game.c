@@ -71,7 +71,7 @@ float overlapX, overlapY;
 CP_Sound slash;
 CP_Sound bowarrow;
 CP_Sound player_damage;
-int is_sound_playing = 0;
+CP_Sound hp;
 
 CP_Image bow, sword, potion;
 
@@ -204,6 +204,7 @@ void Game_Init(void)
 	bowarrow = CP_Sound_Load("./Assets/Audios/bow and arrow.wav"); // projectile sound effect
 	slash = CP_Sound_Load("./Assets/Audios/slashing.wav"); // sword attack sound
 	player_damage = CP_Sound_Load("./Assets/Audios/player damage.wav"); // player taking damage sound effect
+	hp = CP_Sound_Load("./Assets/Audios/potion.wav"); // potion sound effect
 
 	// items in inventory
 	bow = CP_Image_Load("./Assets/Weapons/bow.png");
@@ -712,13 +713,14 @@ void Game_Update(void)
 		CP_Graphics_DrawRect(windowLength / 2.0f + ((i - 2) * 120), windowHeight - 65, 100, 100);
 	}
 
-	CP_Image_Draw(sword, windowLength / 2.0f + ((-1) * 120), windowHeight - 65.0f, 60.0f, 91.0f, 255); // drawing sword in 1st inventory slot
+	CP_Image_Draw(sword, windowLength / 2.0f + ((-1) * 120), windowHeight - 65.0f, 48.0f, 100.0f, 255); // drawing sword in 1st inventory slot
 	CP_Image_Draw(bow, windowLength / 2, windowHeight - 65.0f, 60.0f, 91.0f, 255); // drawing bow in 2nd inventory slot
-	CP_Image_Draw(potion, windowLength / 2.0f + ((1) * 120), windowHeight - 65.0f, 86.0f, 86.0f, 255); // drawing health potion in 3rd inventory slot
+	CP_Image_Draw(potion, windowLength / 2.0f + ((1) * 120), windowHeight - 65.0f, 48.0f, 78.0f, 255); // drawing health potion in 3rd inventory slot
 
 	// when slot 3 is selected and used
 	if (CP_Input_MouseTriggered(MOUSE_BUTTON_LEFT) && Paused == 0 && !IsAreaClicked(50, 50, 50, 50, CP_Input_GetMouseX(), CP_Input_GetMouseY()) && ClickedSlot == 3) {
 		if (HPBARHEALTH < knight.width) {
+			CP_Sound_Play(hp);
 			HPBARHEALTH += 10; // regains 10 hp
 			if (HPBARHEALTH > knight.width) {
 				HPBARHEALTH = knight.width;
@@ -751,6 +753,16 @@ void Game_Update(void)
 		CP_Settings_TextSize(50.0f);
 		CP_Settings_TextAlignment(CP_TEXT_ALIGN_H_CENTER, CP_TEXT_ALIGN_V_MIDDLE);
 		CP_Font_DrawText(timer.text, windowLength / 2.0f, timer.y);
+
+		if (timer.timeLeft == 0.0f) {
+			CP_Settings_Fill(CP_Color_Create(45, 255, 0, 255));
+			CP_Settings_RectMode(CP_POSITION_CENTER);
+			CP_Graphics_DrawRect(windowLength - 200, killcount.y, 250, killcount.height);
+			CP_Settings_Fill(CP_Color_Create(0, 0, 0, 255));
+			CP_Settings_TextSize(50.0f);
+			CP_Settings_TextAlignment(CP_TEXT_ALIGN_H_CENTER, CP_TEXT_ALIGN_V_MIDDLE);
+			CP_Font_DrawText("CONTINUE", windowLength - 200, killcount.y);
+		}
 	}
 	else if (GameMode == 1) {
 		// Kill-Based Game Mode Code
@@ -764,6 +776,16 @@ void Game_Update(void)
 		CP_Settings_TextSize(50.0f);
 		CP_Settings_TextAlignment(CP_TEXT_ALIGN_H_CENTER, CP_TEXT_ALIGN_V_MIDDLE);
 		CP_Font_DrawText(killcount.text, windowLength / 2.0f, killcount.y);
+
+		if (killcount.amount == killcount.total) {
+			CP_Settings_Fill(CP_Color_Create(45, 255, 0, 255));
+			CP_Settings_RectMode(CP_POSITION_CENTER);
+			CP_Graphics_DrawRect(windowLength - 200, killcount.y, 250, killcount.height);
+			CP_Settings_Fill(CP_Color_Create(0, 0, 0, 255));
+			CP_Settings_TextSize(50.0f);
+			CP_Settings_TextAlignment(CP_TEXT_ALIGN_H_CENTER, CP_TEXT_ALIGN_V_MIDDLE);
+			CP_Font_DrawText("CONTINUE", windowLength - 200, killcount.y);
+		}
 	}
 
 	if (Paused == 1 && GAMEOVER == 0)
@@ -840,10 +862,10 @@ void Game_Update(void)
 		current_level++;
 		CP_Engine_SetNextGameStateForced(Game_Init, Game_Update, Game_Exit);
 	}
-	if (CP_Input_KeyDown(KEY_Q)) {
-		current_level = 0;
-		CP_Engine_SetNextGameState(Main_Menu_Init, Main_Menu_Update, Main_Menu_Exit);
-	}
+	//if (CP_Input_KeyDown(KEY_Q)) {
+	//	current_level = 0;
+	//	CP_Engine_SetNextGameState(Main_Menu_Init, Main_Menu_Update, Main_Menu_Exit);
+	//}
 
 	CP_Settings_ImageMode(CP_POSITION_CORNER);
 	CP_Image_Draw(bg2, 0, 0, windowLength, windowHeight, 255);
