@@ -42,7 +42,7 @@ int HPBARHEALTH;
 float hitTimer = 0.0f;
 int ClickedSlot = 1;
 int Paused = 0;
-int GameMode = 0; //0 = Time-Based, 1 = Kill-Based
+int GameMode = 0; //0 = Time-Based, 1 = Kill-Based, 2 = Boss Fight
 
 // ++ Darrell's Boost Spawn Variables +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -245,7 +245,7 @@ void Game_Update(void)
 		timer.timeLeft -= dt;
 		if (timer.timeLeft <= 0.0f) {
 			timer.timeLeft = 0.0f;
-			GAMEOVER = 1; // time's up
+			//GAMEOVER = 1; // time's up
 		}
 	}
 
@@ -595,7 +595,10 @@ void Game_Update(void)
 	//Testing dummy respawn
 	for (int i = 0; i < MAX_DUMMY; i++)
 	{
-		if (dummy[i].dead == 1 && killcount.amount < 6) {
+		if (GameMode == 2) {
+			continue;
+		}
+		if (dummy[i].dead == 1 && (GameMode == 0 || killcount.amount < 6)) {
 			dummy[i].dead = 0;
 			do {
 				dummy[i].x = random_range(100, 1500);
@@ -802,6 +805,29 @@ void Game_Update(void)
 	CP_Image_Draw(bow, windowLength / 2, windowHeight - 65.0f, 60.0f, 91.0f, 255); // drawing bow in 2nd inventory slot
 	CP_Image_Draw(potion, windowLength / 2.0f + ((1) * 120), windowHeight - 65.0f, 48.0f, 78.0f, 255); // drawing health potion in 3rd inventory slot
 
+	// level indicators
+	if (current_level == 0) { 
+		CP_Settings_Fill(CP_Color_Create(0, 0, 0, 255));
+		CP_Settings_TextSize(50.0f);
+		CP_Font_DrawText("LEVEL 1", (windowLength / 2) - 350.0f, windowHeight - 65.0f);
+		if (GameMode == 2) GameMode = random_range(0, 1); // resetting game mode after boss level
+	}
+	else if (current_level == 1) {
+		CP_Settings_Fill(CP_Color_Create(0, 0, 0, 255));
+		CP_Settings_TextSize(50.0f);
+		CP_Font_DrawText("LEVEL 2", (windowLength / 2) - 350.0f, windowHeight - 65.0f);
+		if (GameMode == 2) GameMode = random_range(0, 1); // resetting game mode after boss level
+	}
+	else if (current_level == 2) {
+		CP_Settings_Fill(CP_Color_Create(0, 0, 0, 255));
+		CP_Settings_TextSize(50.0f);
+		CP_Font_DrawText("LEVEL 3", (windowLength / 2) - 350.0f, windowHeight - 65.0f);
+		if (GameMode == 2) GameMode = random_range(0, 1); // resetting game mode after boss level
+	}
+	else if (current_level == 3){
+		GameMode = 2;
+	}
+
 	// when slot 3 is selected and used
 	if (CP_Input_MouseTriggered(MOUSE_BUTTON_LEFT) && Paused == 0 && !IsAreaClicked(50, 50, 50, 50, CP_Input_GetMouseX(), CP_Input_GetMouseY()) && ClickedSlot == 3) {
 		if (HPBARHEALTH < knight.width) {
@@ -839,7 +865,7 @@ void Game_Update(void)
 		CP_Settings_TextAlignment(CP_TEXT_ALIGN_H_CENTER, CP_TEXT_ALIGN_V_MIDDLE);
 		CP_Font_DrawText(timer.text, windowLength / 2.0f, timer.y);
 
-		if (timer.timeLeft == 0.0f) {
+		if (timer.timeLeft <= 0.0f) {
 			CP_Settings_Fill(CP_Color_Create(45, 255, 0, 255));
 			CP_Settings_RectMode(CP_POSITION_CENTER);
 			CP_Graphics_DrawRect(windowLength - 200, killcount.y, 250, killcount.height);
@@ -889,6 +915,7 @@ void Game_Update(void)
 		if (IsAreaClicked(windowLength / 2 + 300, windowHeight / 2 + 200, 200, 100, CP_Input_GetMouseX(), CP_Input_GetMouseY()))
 		{
 			CP_Engine_SetNextGameState(Main_Menu_Init, Main_Menu_Update, Main_Menu_Exit);
+			current_level = 0;
 		}
 
 		//If resume button is clicked, close pause mode and resume.
@@ -942,8 +969,15 @@ void Game_Update(void)
 		random_map[current_level] = 2; CP_Engine_SetNextGameStateForced(Game_Init, Game_Update, Game_Exit);
 	}
 
-	// QUS EDIT THIS FOR NXT LVL
-	if (CP_Input_KeyTriggered(KEY_N) && current_level < LEVELS - 1) {
+	if (CP_Input_KeyTriggered(KEY_UP)) {
+		current_level++;
+	}
+	if (CP_Input_KeyTriggered(KEY_DOWN) && current_level != 0) {
+		current_level--;
+	}
+
+	// continue button to proceed to next level
+	if (IsAreaClicked(windowLength - 200, killcount.y, 250, killcount.height, CP_Input_GetMouseX(), CP_Input_GetMouseY()) && current_level < LEVELS - 1) {
 		current_level++;
 		CP_Engine_SetNextGameStateForced(Game_Init, Game_Update, Game_Exit);
 	}
@@ -991,9 +1025,29 @@ void Game_Update(void)
 			CP_Engine_SetNextGameState(Main_Menu_Init, Main_Menu_Update, Main_Menu_Exit);
 		}
 	}
+
+	if (GameMode == 2) { // boss level
+		for (int i = 0; i < MAX_DUMMY; i++) { // making all alive enemies dead
+			dummy[i].dead = 1;
+			dummy[i].counter = 0;
+		}
+
+		// level indicator
+		CP_Settings_Fill(CP_Color_Create(0, 0, 0, 255));
+		CP_Settings_TextSize(50.0f);
+		CP_Font_DrawText("BOSS LEVEL", (windowLength / 2) - 350.0f, windowHeight - 65.0f); 
+
+		// boss health bar
+		CP_Settings_Fill(CP_Color_Create(255, 0, 0, 255));
+		CP_Graphics_DrawRect(windowLength / 2, killcount.y, 1000, killcount.height);
+
+
+	}
 }
 
 void Game_Exit(void)
 {
 	CP_Font_Free(font_menu);
+	CP_Image_Free(bg);
+	CP_Image_Free(bg2);
 }
