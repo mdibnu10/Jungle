@@ -8,6 +8,9 @@
 //
 // Copyright © 2026 DigiPen, All rights reserved.
 //---------------------------------------------------------
+#pragma once
+#include "cprocessing.h"
+
 #define LEVELS 3
 #define MAPS_PER_LEVEL 3
 #define MAX_OBSTACLE 12
@@ -23,9 +26,13 @@ void Game_Exit(void);
 
 typedef struct MapData
 {
-    const char* image_path;
+	const char* image_path;
 	const char* obstacle_path;
-  
+	float* arr_x;
+	float* arr_y;
+	float* arr_w;
+	float* arr_h;
+	int size;
 } MapData;
 
 typedef struct {
@@ -47,21 +54,21 @@ typedef struct {
 	float height;
 } Obstacle;
 //---------------------------------------------------------
-typedef struct {
-	float x;
-	float y;
-	float width;
-	float height;
-	int collected; // 0 not collected, 1 collected
-} SpeedBoost;
 
 typedef struct {
-	float x;
-	float y;
-	float width;
-	float height;
-	int noOfEffects;
-} Effects;
+	CP_Color color;
+	int stacks;
+	const char* name;
+	const char* description;
+} Effect;
+
+typedef enum
+{
+	SPEED_BOOST,
+	MORE_MAXHP,
+	DAMAGE_BOOST,
+	BOOST_COUNT
+} BoostType;
 
 typedef struct {
 	float y;          // vertical position of the box
@@ -81,6 +88,6 @@ typedef struct {
 } KillCount;
 //---------------------------------------------------------
 
-extern int random[LEVELS];
+extern int random_map[LEVELS];
 extern int current_level;
 extern MapData maps[LEVELS][MAPS_PER_LEVEL];

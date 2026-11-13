@@ -16,6 +16,7 @@
 #include <stdio.h>
 #include <math.h>
 
+MapData* current_map;
 Player knight;
 CP_Image bg, arrow, bg2;
 Enemy dummy[MAX_DUMMY];
@@ -26,29 +27,42 @@ Bullet bullets[MAX_BULLETS];
 char text[100];
 CP_Font font_menu = NULL;
 
-Obstacle obstacle[12];
-float Obs_X[MAX_OBSTACLE] = { 1216.13f, 1072.00f, 351.88f, 688.33f, 1488, 672.06f, 272.13f, 352.00f, 895.82f, 687.95f, 1184.00f, 1215.75f};
-float Obs_Y[MAX_OBSTACLE] = { 144.00f, 248.19f, 464.00f, 208, 232.25f, 464.06f, 784.13f, 231.91f, 408.36f, 600.00f, 600.14f, 784.00f};
-float Obs_W[MAX_OBSTACLE] = { 64.25f, 32.75, 64.25f, 64.67f, 32.5f, 64.375f, 64.75f, 32.36f, 32, 32.09f, 32.36f, 64.5f};
-float Obs_H[MAX_OBSTACLE] = { 32.5f, 16.125f, 32, 32.67f, 16.5f, 32.125f, 32.25f, 15.82f, 16, 16, 16.09f, 32.5f};
+int max_obs;
+Obstacle obstacle[MAX_OBSTACLE];
 
 //---------------------------------------------------------
 //Darrel
 //---------------------------------------------------------
-Effects effects;
-SpeedBoost speedboost;
 Timer timer;
 KillCount killcount;
 
 int lives = 3;
 int GAMEOVER = 0;
 int HPBARHEALTH;
-int randomX;
-int randomY;
 float hitTimer = 0.0f;
 int ClickedSlot = 1;
 int Paused = 0;
 int GameMode = 0; //0 = Time-Based, 1 = Kill-Based
+
+// ++ Darrell's Boost Spawn Variables +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+BoostType boostType;
+float x;
+float y;
+int boostCollected = 0;
+
+float enemyDmg; //How much damage the enemy is dealing
+float enemyDmgMultiplier; //Dmg Multiplier
+
+int DummyDmgTaken;
+float boostSpawnTimer;
+
+float boostWidth;
+float boothHeight;
+
+Effect effects[BOOST_COUNT];
+// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
 //---------------------------------------------------------
 float ObsminX, ObsmaxX, ObsminY, ObsmaxY;
 float KnightminX, KnightmaxX, KnightminY, KnightmaxY;
@@ -58,16 +72,16 @@ float overlapX, overlapY;
 CP_Sound slash;
 CP_Sound bowarrow;
 CP_Sound player_damage;
-int is_sound_playing = 0;
+CP_Sound hp;
 
 CP_Image bow, sword, potion;
 
 void Game_Init(void)
 {
-    knight.x = 800.0f;
-    knight.y = 450.0f;
-    knight.speed = 210.0f;
-    knight.state = IDLE;
+	knight.x = 800.0f;
+	knight.y = 450.0f;
+	knight.speed = 210.0f;
+	knight.state = IDLE;
 	knight.width = 50;
 	knight.height = 60;
 	knight.iFrame = 0;
@@ -98,17 +112,11 @@ void Game_Init(void)
 	Norm_X = 0.0f;
 	Norm_Y = 0.0f;
 
-	bg = CP_Image_Load(maps[current_level][random[current_level]].image_path);
-	if ((maps[current_level][random[current_level]].obstacle_path) != NULL)
-	{
-		bg2 = CP_Image_Load((maps[current_level][random[current_level]].obstacle_path));
-	}
-	else
-	{
-	
-	bg2 = NULL;
-	}
-	int rac = random[current_level];
+	current_map = &maps[current_level][random_map[current_level]];
+	max_obs = current_map->size;
+	bg = CP_Image_Load(current_map->image_path);
+	bg2 = CP_Image_Load(current_map->obstacle_path);
+
 	arrow = CP_Image_Load("Assets/Arrow.png");
     Anim_Init(&knight.idle, "Assets/Knight_Idle.png", 120, 80, 0.12f, 1);
     Anim_Init(&knight.run, "Assets/Knight_Run.png", 120, 80, 0.12f, 1);
@@ -128,11 +136,11 @@ void Game_Init(void)
 	// Obstacle Values based on one map only for testing
 	if (bg2 != NULL)
 	{
-		for (int i = 0; i < MAX_OBSTACLE; i++) {
-			obstacle[i].x = Obs_X[i];
-			obstacle[i].y = Obs_Y[i];
-			obstacle[i].width = Obs_W[i];
-			obstacle[i].height = Obs_H[i];
+		for (int i = 0; i < max_obs; i++) {
+			obstacle[i].x = *(current_map->arr_x + i);
+			obstacle[i].y = *(current_map->arr_y + i);
+			obstacle[i].width = *(current_map->arr_w + i);
+			obstacle[i].height = *(current_map->arr_h + i);
 		}
 	}
 
@@ -144,22 +152,45 @@ void Game_Init(void)
 	//---------------------------------------------------------
 	//Darrel
 	//---------------------------------------------------------
-	//SpeedBoost Values
-	speedboost.x = 100;
-	speedboost.y = 100;
-	speedboost.width = 30;
-	speedboost.height = 30;
-	speedboost.collected = 0;
+	// ++ Darrell's Boost Variables +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+	//Boost Sizing
+	boostWidth = 70.0f;
+	boothHeight = 70.0f;
+
+	//First boost spawns right away, the next one after boostSpawnTimer runs out
+	SpawnBoost(&boostType, &x, &y, &boostCollected, &boostSpawnTimer,
+		CP_System_GetWindowWidth(), CP_System_GetWindowHeight());
+
+	//Enemy Damage by % (after knight.width is set above)
+	enemyDmgMultiplier = 15.0f; // Adjust this multiplier to change the enemy's damage
+	enemyDmg = (knight.width * (enemyDmgMultiplier / 100.0f));
+
+	//Dummy Damage Taken
+	DummyDmgTaken = 1;
 
 	//Effects Values
-	effects.noOfEffects = 1;
+	for (int i = 0; i < BOOST_COUNT; i++) {
+		effects[i].stacks = 0;
+	}
+	effects[SPEED_BOOST].color = CP_Color_Create(0, 255, 0, 255);
+	effects[SPEED_BOOST].name = "Speed Boost";
+	effects[SPEED_BOOST].description = "Move faster.";
+
+	effects[MORE_MAXHP].color = CP_Color_Create(0, 0, 255, 255);
+	effects[MORE_MAXHP].name = "Toughness";
+	effects[MORE_MAXHP].description = "Enemies deal less damage.";
+
+	effects[DAMAGE_BOOST].color = CP_Color_Create(255, 0, 0, 255);
+	effects[DAMAGE_BOOST].name = "Damage Boost";
+	effects[DAMAGE_BOOST].description = "You deal higher damage.";
+
+	// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 	//Pause Mode
 	Paused = 0;
 
 	HPBARHEALTH = knight.width;
-	randomX = random_range(100, CP_System_GetDisplayWidth() - 110);
-	randomY = random_range(100, CP_System_GetDisplayHeight() - 110);
 
 	//Timer Values
 	timer.y = 50.0f;
@@ -182,6 +213,7 @@ void Game_Init(void)
 	bowarrow = CP_Sound_Load("./Assets/Audios/bow and arrow.wav"); // projectile sound effect
 	slash = CP_Sound_Load("./Assets/Audios/slashing.wav"); // sword attack sound
 	player_damage = CP_Sound_Load("./Assets/Audios/player damage.wav"); // player taking damage sound effect
+	hp = CP_Sound_Load("./Assets/Audios/potion.wav"); // potion sound effect
 
 	// items in inventory
 	bow = CP_Image_Load("./Assets/Weapons/bow.png");
@@ -208,11 +240,20 @@ void Game_Update(void)
 	if (hitTimer > 0.0f && Paused == 0) {
 		hitTimer -= dt;
 	}
-	if (GAMEOVER != 1 && Paused == 0 && timer.timeLeft > 0.0f) {
+	//Countdown only runs in the time-based mode
+	if (GameMode == 0 && GAMEOVER != 1 && Paused == 0 && timer.timeLeft > 0.0f) {
 		timer.timeLeft -= dt;
 		if (timer.timeLeft <= 0.0f) {
 			timer.timeLeft = 0.0f;
 			GAMEOVER = 1; // time's up
+		}
+	}
+
+	//Spawn a new random boost every time the spawn timer runs out
+	if (GAMEOVER != 1 && Paused == 0) {
+		boostSpawnTimer -= dt;
+		if (boostSpawnTimer <= 0.0f) {
+			SpawnBoost(&boostType, &x, &y, &boostCollected, &boostSpawnTimer, windowLength, windowHeight);
 		}
 	}
 	//---------------------------------------------------------
@@ -410,7 +451,7 @@ void Game_Update(void)
 					}
 				}
 			}
-			for (int y = 0; y < MAX_OBSTACLE; y++) {
+			for (int y = 0; y < max_obs; y++) {
 				if (bullets[i].x <= obstacle[y].x + obstacle[y].width / 2.0f &&
 					bullets[i].x >= obstacle[y].x - obstacle[y].width / 2.0f &&
 					bullets[i].y <= obstacle[y].y + obstacle[y].height / 2.0f &&
@@ -438,7 +479,7 @@ void Game_Update(void)
 	}
 	//AABB INTERSECTION !!!!
 	// For Knight
-	for (int i = 0; i < MAX_OBSTACLE; i++) {
+	for (int i = 0; i < max_obs; i++) {
 		if (IsSquareColliding(obstacle[i].x, obstacle[i].y, obstacle[i].width, obstacle[i].height, knight.x, knight.y, knight.width, knight.height, &overlapX, &overlapY)) {
 			if (overlapX < overlapY) {
 				knight.x = (knight.x < obstacle[i].x) ? (knight.x -= overlapX) : (knight.x += overlapX);
@@ -536,7 +577,7 @@ void Game_Update(void)
 			CP_Settings_TextSize(30.0f);
 		}
 	}
-	for (int i = 0; i < MAX_OBSTACLE; i++) {
+	for (int i = 0; i < max_obs; i++) {
 		CP_Settings_Fill(CP_Color_Create(255, 0, 0, 255));
 		CP_Graphics_DrawRect(obstacle[i].x, obstacle[i].y, obstacle[i].width, obstacle[i].height);
 	}
@@ -595,6 +636,23 @@ void Game_Update(void)
 			knight.iFrameTimer = 1.0f;
 			if (ClickedSlot == 1 && CP_Input_MouseTriggered(MOUSE_BUTTON_LEFT)) { // if player and enemy collide, and player uses melee attack
 				dummy[i].counter -= 1; // enemy taking damage
+	//If Player and Dummy collide, the player loses HP.
+	if (IsSquareColliding2(dummy.x, dummy.y, dummy.width, dummy.height, knight.x, knight.y, knight.width, knight.height) && dummy.counter != 0 && Paused == 0 && knight.iFrame == 0 && GAMEOVER != 1) {
+		dummy.state = ATTACK;
+		Anim_Reset(&dummy.attack);
+		// Handle collision
+		HPBARHEALTH -= enemyDmg;
+		hitTimer = 0.15f;
+		CP_Sound_Play(player_damage);
+		if (HPBARHEALTH < 0) {
+			HPBARHEALTH = 0;
+		}
+		knight.iFrame = 1;
+		knight.iFrameTimer = 1.0f;
+		if (ClickedSlot == 1 && CP_Input_MouseTriggered(MOUSE_BUTTON_LEFT)) { // if player and enemy collide, and player uses melee attack
+			dummy.counter -= 1; // enemy taking damage
+			if (dummy.counter < 0) {
+				dummy.counter = 0;
 			}
 		}
 	}
@@ -624,24 +682,98 @@ void Game_Update(void)
 	CP_Graphics_DrawRect(windowLength / 2, windowHeight - 65.0f, windowLength, 130.0f);
 
 	//Draw a smaller HP bar below the player to show how much health the player has.
-	//Disappears when SpeedBoost is collected.
 	CP_Settings_Fill(CP_Color_Create(0, 70, 0, 255));
 	CP_Settings_RectMode(CP_POSITION_CORNER);
 	CP_Graphics_DrawRect(knight.x - (knight.width / 2.0f), knight.y + (knight.height / 2.0f + 10.0f), HPBARHEALTH, 10.0f);
 
-	//Draw Speed-Boost Power Up Bar
-	if (speedboost.collected == 0) {
-		CP_Settings_Fill(CP_Color_Create(0, 255, 255, 255));
-		CP_Graphics_DrawRect(randomX, randomY, 10.0f, 10.0f);
-	}
+	// ++ Darrell's Boost Spawn Variables +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-	//Draw the Effect Status Box
-	CP_Settings_Fill(CP_Color_Create(255, 0, 255, 255));
-	if (effects.noOfEffects > 0) {
-		for (int i = 0; i < effects.noOfEffects; i++) {
-			CP_Graphics_DrawCircle(windowLength - 95 - (i * 80), windowHeight - 60, 70);
+	if (boostCollected == 0) {
+		// Draw the boost (only while it hasn't been collected)
+		CP_Settings_RectMode(CP_POSITION_CENTER);   // match how the collision treats x,y
+		CP_Settings_Fill(effects[boostType].color);
+		CP_Graphics_DrawRect(x, y, boostWidth, boothHeight);
+
+		// Pickup check
+		if (IsSquareColliding2(x, y, boostWidth, boothHeight, knight.x, knight.y, knight.width, knight.height))
+		{
+			switch (boostType) {
+			case SPEED_BOOST:
+				knight.speed += 20.0f;
+				break;
+			case MORE_MAXHP:
+				enemyDmgMultiplier -= 2.0f;
+				enemyDmg = knight.width * (enemyDmgMultiplier / 100.0f);
+				break;
+			case DAMAGE_BOOST:
+				DummyDmgTaken += 1;
+				break;
+			}
+			effects[boostType].stacks += 1;
+			boostCollected = 1;
 		}
 	}
+
+	//Draw the Effect Status Icons + hover tooltip
+	int slot = 0;
+	int hovered = -1;
+	float hoverX = 0.0f, hoverY = 0.0f;
+
+	for (int i = 0; i < BOOST_COUNT; i++) {
+		if (effects[i].stacks > 0) {
+			float cx = windowLength - 95.0f - (slot * 80.0f);
+			float cy = windowHeight - 60.0f;
+
+			CP_Settings_Fill(effects[i].color);
+			CP_Graphics_DrawCircle(cx, cy, 70);
+
+			float dx = mouseX - cx; //For hovering over the effect icons
+			float dy = mouseY - cy;
+			if ((dx * dx) + (dy * dy) <= 35.0f * 35.0f) {
+				hovered = i;
+				hoverX = cx;
+				hoverY = cy;
+			}
+			slot++;
+		}
+	}
+
+	if (hovered != -1) {
+		//Draw the box
+		float boxW = 300.0f;
+		float boxH = 120.0f;
+		float boxX = hoverX + 35.0f - boxW;
+		float boxY = hoverY - 35.0f - boxH - 10.0f;
+		if (boxX < 0.0f)
+		{
+			boxX = 0.0f; //In case it exceeds out
+		}
+
+		// Background box
+		CP_Settings_RectMode(CP_POSITION_CORNER);
+		CP_Settings_Fill(CP_Color_Create(20, 20, 20, 230));
+		CP_Graphics_DrawRect(boxX, boxY, boxW, boxH);
+
+		// Text
+		char buf[255];
+		CP_Settings_TextAlignment(CP_TEXT_ALIGN_H_LEFT, CP_TEXT_ALIGN_V_TOP);
+		CP_Settings_Fill(CP_Color_Create(255, 255, 255, 255));
+
+		CP_Settings_TextSize(30.0f);
+		CP_Font_DrawText(effects[hovered].name, boxX + 15.0f, boxY + 10.0f);
+
+		CP_Settings_TextSize(15.0f);
+		CP_Font_DrawText(effects[hovered].description, boxX + 15.0f, boxY + 50.0f);
+
+		snprintf(buf, sizeof(buf), "Stacks: x%d", effects[hovered].stacks);
+		CP_Font_DrawText(buf, boxX + 15.0f, boxY + 85.0f);
+
+		CP_Settings_TextAlignment(CP_TEXT_ALIGN_H_CENTER, CP_TEXT_ALIGN_V_MIDDLE);
+		CP_Settings_RectMode(CP_POSITION_CENTER);
+	}
+
+	// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
 	//Draw the Heart as a a circle for now.
 	CP_Settings_Fill(CP_Color_Create(255, 70, 0, 255));
 	if (HPBARHEALTH != 0)
@@ -655,14 +787,6 @@ void Game_Update(void)
 	{
 		if (lives == 1)
 		{
-			//CP_Settings_Fill(CP_Color_Create(255, 255, 255, 100));
-			//CP_Settings_RectMode(CP_POSITION_CENTER);
-			//CP_Graphics_DrawRect(windowLength / 2, windowHeight / 2, windowLength, windowHeight);
-
-			//CP_Settings_Fill(CP_Color_Create(0, 0, 0, 255));
-			//CP_Settings_TextSize(100.0f);
-			//CP_Settings_TextAlignment(CP_TEXT_ALIGN_H_CENTER, CP_TEXT_ALIGN_V_MIDDLE);
-			//CP_Font_DrawText("GAME OVER", windowLength / 2.0f, windowHeight / 2.0f);
 			GAMEOVER = 1;
 		}
 		else
@@ -701,17 +825,18 @@ void Game_Update(void)
 		CP_Graphics_DrawRect(windowLength / 2.0f + ((i - 2) * 120), windowHeight - 65, 100, 100);
 	}
 
-	CP_Image_Draw(sword, windowLength / 2.0f + ((-1) * 120), windowHeight - 65.0f, 60.0f, 91.0f, 255); // drawing sword in 1st inventory slot
+	CP_Image_Draw(sword, windowLength / 2.0f + ((-1) * 120), windowHeight - 65.0f, 48.0f, 100.0f, 255); // drawing sword in 1st inventory slot
 	CP_Image_Draw(bow, windowLength / 2, windowHeight - 65.0f, 60.0f, 91.0f, 255); // drawing bow in 2nd inventory slot
-	CP_Image_Draw(potion, windowLength / 2.0f + ((1) * 120), windowHeight - 65.0f, 86.0f, 86.0f, 255); // drawing health potion in 3rd inventory slot
+	CP_Image_Draw(potion, windowLength / 2.0f + ((1) * 120), windowHeight - 65.0f, 48.0f, 78.0f, 255); // drawing health potion in 3rd inventory slot
 
 	// when slot 3 is selected and used
 	if (CP_Input_MouseTriggered(MOUSE_BUTTON_LEFT) && Paused == 0 && !IsAreaClicked(50, 50, 50, 50, CP_Input_GetMouseX(), CP_Input_GetMouseY()) && ClickedSlot == 3) {
 		if (HPBARHEALTH < knight.width) {
+			CP_Sound_Play(hp);
 			HPBARHEALTH += 10; // regains 10 hp
-		}
-		else if (HPBARHEALTH > knight.width) {
-			HPBARHEALTH == knight.width;
+			if (HPBARHEALTH > knight.width) {
+				HPBARHEALTH = knight.width;
+			}
 		}
 	}
 
@@ -740,6 +865,16 @@ void Game_Update(void)
 		CP_Settings_TextSize(50.0f);
 		CP_Settings_TextAlignment(CP_TEXT_ALIGN_H_CENTER, CP_TEXT_ALIGN_V_MIDDLE);
 		CP_Font_DrawText(timer.text, windowLength / 2.0f, timer.y);
+
+		if (timer.timeLeft == 0.0f) {
+			CP_Settings_Fill(CP_Color_Create(45, 255, 0, 255));
+			CP_Settings_RectMode(CP_POSITION_CENTER);
+			CP_Graphics_DrawRect(windowLength - 200, killcount.y, 250, killcount.height);
+			CP_Settings_Fill(CP_Color_Create(0, 0, 0, 255));
+			CP_Settings_TextSize(50.0f);
+			CP_Settings_TextAlignment(CP_TEXT_ALIGN_H_CENTER, CP_TEXT_ALIGN_V_MIDDLE);
+			CP_Font_DrawText("CONTINUE", windowLength - 200, killcount.y);
+		}
 	}
 	else if (GameMode == 1) {
 		// Kill-Based Game Mode Code
@@ -753,6 +888,16 @@ void Game_Update(void)
 		CP_Settings_TextSize(50.0f);
 		CP_Settings_TextAlignment(CP_TEXT_ALIGN_H_CENTER, CP_TEXT_ALIGN_V_MIDDLE);
 		CP_Font_DrawText(killcount.text, windowLength / 2.0f, killcount.y);
+
+		if (killcount.amount == killcount.total) {
+			CP_Settings_Fill(CP_Color_Create(45, 255, 0, 255));
+			CP_Settings_RectMode(CP_POSITION_CENTER);
+			CP_Graphics_DrawRect(windowLength - 200, killcount.y, 250, killcount.height);
+			CP_Settings_Fill(CP_Color_Create(0, 0, 0, 255));
+			CP_Settings_TextSize(50.0f);
+			CP_Settings_TextAlignment(CP_TEXT_ALIGN_H_CENTER, CP_TEXT_ALIGN_V_MIDDLE);
+			CP_Font_DrawText("CONTINUE", windowLength - 200, killcount.y);
+		}
 	}
 
 	if (Paused == 1 && GAMEOVER == 0)
@@ -809,22 +954,37 @@ void Game_Update(void)
 			CP_Image_DrawSubImageAdvanced(arrow, bullets[i].x, bullets[i].y, 32, 32, 32, 0, 48, 16, 255, bullets[i].angle);
 		}
 	}
-	//CP_Graphics_DrawCircle(knight.x, knight.y, knight.size);
-	if (CP_Input_KeyDown(KEY_Q)) {
-		CP_Engine_SetNextGameState(Main_Menu_Init, Main_Menu_Update, Main_Menu_Exit);
+
+	// CHI SHI
+	if (CP_Input_KeyTriggered(KEY_8))
+	{ 
+		random_map[current_level] = 0; CP_Engine_SetNextGameStateForced(Game_Init, Game_Update, Game_Exit);
+	}
+	if (CP_Input_KeyTriggered(KEY_9))
+	{ 
+		random_map[current_level] = 1; CP_Engine_SetNextGameStateForced(Game_Init, Game_Update, Game_Exit);
+	}
+	if (CP_Input_KeyTriggered(KEY_0))
+	{ 
+		random_map[current_level] = 2; CP_Engine_SetNextGameStateForced(Game_Init, Game_Update, Game_Exit);
 	}
 
+	// QUS EDIT THIS FOR NXT LVL
+	if (CP_Input_KeyTriggered(KEY_N) && current_level < LEVELS - 1) {
+		current_level++;
+		CP_Engine_SetNextGameStateForced(Game_Init, Game_Update, Game_Exit);
+	}
+	//if (CP_Input_KeyDown(KEY_Q)) {
+	//	current_level = 0;
+	//	CP_Engine_SetNextGameState(Main_Menu_Init, Main_Menu_Update, Main_Menu_Exit);
+	//}
 
 	CP_Settings_ImageMode(CP_POSITION_CORNER);
+	CP_Image_Draw(bg2, 0, 0, windowLength, windowHeight, 255);
 	
-	if (bg2 != NULL)
-	{
-		CP_Image_Draw(bg2, 0, 0, windowLength, windowHeight, 255);
-	}
 
 	if (GAMEOVER == 1) { // when player dies
 		Paused = 1; // pauses the game so the player has no inputs
-		//CP_Sound_PauseAll(); // stops all audio in game
 
 		// drawing red overlay
 		CP_Settings_Fill(CP_Color_Create(255, 0, 0, 100));
@@ -862,5 +1022,5 @@ void Game_Update(void)
 
 void Game_Exit(void)
 {
-	CP_Font_Free(&font_menu);
+	CP_Font_Free(font_menu);
 }
