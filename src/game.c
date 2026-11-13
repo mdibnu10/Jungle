@@ -16,6 +16,7 @@
 #include <stdio.h>
 #include <math.h>
 
+MapData* current_map;
 Player knight;
 CP_Image bg, arrow, bg2;
 Enemy dummy;
@@ -25,11 +26,8 @@ Bullet bullets[MAX_BULLETS];
 char text[100];
 CP_Font font_menu = NULL;
 
+int max_obs;
 Obstacle obstacle[MAX_OBSTACLE];
-float Obs_X[MAX_OBSTACLE] = { 1216.13f, 1072.00f, 351.88f, 688.33f, 1488, 672.06f, 272.13f, 352.00f, 895.82f, 687.95f, 1184.00f, 1215.75f };
-float Obs_Y[MAX_OBSTACLE] = { 144.00f, 248.19f, 464.00f, 208, 232.25f, 464.06f, 784.13f, 231.91f, 408.36f, 600.00f, 600.14f, 784.00f };
-float Obs_W[MAX_OBSTACLE] = { 64.25f, 32.75, 64.25f, 64.67f, 32.5f, 64.375f, 64.75f, 32.36f, 32, 32.09f, 32.36f, 64.5f };
-float Obs_H[MAX_OBSTACLE] = { 32.5f, 16.125f, 32, 32.67f, 16.5f, 32.125f, 32.25f, 15.82f, 16, 16, 16.09f, 32.5f };
 
 //---------------------------------------------------------
 //Darrel
@@ -107,15 +105,11 @@ void Game_Init(void)
 	Norm_X = 0.0f;
 	Norm_Y = 0.0f;
 
-	bg = CP_Image_Load(maps[current_level][random[current_level]].image_path);
-	if ((maps[current_level][random[current_level]].obstacle_path) != NULL)
-	{
-		bg2 = CP_Image_Load((maps[current_level][random[current_level]].obstacle_path));
-	}
-	else
-	{
-		bg2 = NULL;
-	}
+	current_map = &maps[current_level][random_map[current_level]];
+	max_obs = current_map->size;
+	bg = CP_Image_Load(current_map->image_path);
+	bg2 = CP_Image_Load(current_map->obstacle_path);
+
 	arrow = CP_Image_Load("Assets/Arrow.png");
 	Anim_Init(&knight.idle, "Assets/Knight_Idle.png", 120, 80, 0.12f, 1);
 	Anim_Init(&knight.run, "Assets/Knight_Run.png", 120, 80, 0.12f, 1);
@@ -133,11 +127,11 @@ void Game_Init(void)
 	// Obstacle Values based on one map only for testing
 	if (bg2 != NULL)
 	{
-		for (int i = 0; i < MAX_OBSTACLE; i++) {
-			obstacle[i].x = Obs_X[i];
-			obstacle[i].y = Obs_Y[i];
-			obstacle[i].width = Obs_W[i];
-			obstacle[i].height = Obs_H[i];
+		for (int i = 0; i < max_obs; i++) {
+			obstacle[i].x = *(current_map->arr_x + i);
+			obstacle[i].y = *(current_map->arr_y + i);
+			obstacle[i].width = *(current_map->arr_w + i);
+			obstacle[i].height = *(current_map->arr_h + i);
 		}
 	}
 
@@ -385,7 +379,7 @@ void Game_Update(void)
 					bullets[i].state = 0;
 				}
 			}
-			for (int y = 0; y < MAX_OBSTACLE; y++) {
+			for (int y = 0; y < max_obs; y++) {
 				if (bullets[i].x <= obstacle[y].x + obstacle[y].width / 2.0f &&
 					bullets[i].x >= obstacle[y].x - obstacle[y].width / 2.0f &&
 					bullets[i].y <= obstacle[y].y + obstacle[y].height / 2.0f &&
@@ -413,7 +407,7 @@ void Game_Update(void)
 	}
 	//AABB INTERSECTION !!!!
 	// For Knight
-	for (int i = 0; i < MAX_OBSTACLE; i++) {
+	for (int i = 0; i < max_obs; i++) {
 		if (IsSquareColliding(obstacle[i].x, obstacle[i].y, obstacle[i].width, obstacle[i].height, knight.x, knight.y, knight.width, knight.height, &overlapX, &overlapY)) {
 			if (overlapX < overlapY) {
 				knight.x = (knight.x < obstacle[i].x) ? (knight.x -= overlapX) : (knight.x += overlapX);
@@ -425,7 +419,7 @@ void Game_Update(void)
 	}
 	/*------------------------------------------------------------------------------*/
 	//For dummy
-	for (int i = 0; i < MAX_OBSTACLE; i++) {
+	for (int i = 0; i < max_obs; i++) {
 		if (IsSquareColliding(obstacle[i].x, obstacle[i].y, obstacle[i].width, obstacle[i].height, dummy.x, dummy.y, dummy.width, dummy.height, &overlapX, &overlapY)) {
 			if (overlapX < overlapY) {
 				dummy.x = (dummy.x < obstacle[i].x) ? (dummy.x -= overlapX) : (dummy.x += overlapX);
@@ -502,7 +496,7 @@ void Game_Update(void)
 		CP_Font_DrawText(text, dummy.x, dummy.y - (dummy.height / 2.0f) - 12.0f);
 		CP_Settings_TextSize(30.0f);
 	}
-	for (int i = 0; i < MAX_OBSTACLE; i++) {
+	for (int i = 0; i < max_obs; i++) {
 		CP_Settings_Fill(CP_Color_Create(255, 0, 0, 255));
 		CP_Graphics_DrawRect(obstacle[i].x, obstacle[i].y, obstacle[i].width, obstacle[i].height);
 	}
@@ -826,16 +820,34 @@ void Game_Update(void)
 			CP_Image_DrawSubImageAdvanced(arrow, bullets[i].x, bullets[i].y, 32, 32, 32, 0, 48, 16, 255, bullets[i].angle);
 		}
 	}
+
+	// CHI SHI
+	if (CP_Input_KeyTriggered(KEY_8))
+	{ 
+		random_map[current_level] = 0; CP_Engine_SetNextGameStateForced(Game_Init, Game_Update, Game_Exit);
+	}
+	if (CP_Input_KeyTriggered(KEY_9))
+	{ 
+		random_map[current_level] = 1; CP_Engine_SetNextGameStateForced(Game_Init, Game_Update, Game_Exit);
+	}
+	if (CP_Input_KeyTriggered(KEY_0))
+	{ 
+		random_map[current_level] = 2; CP_Engine_SetNextGameStateForced(Game_Init, Game_Update, Game_Exit);
+	}
+
+	// QUS EDIT THIS FOR NXT LVL
+	if (CP_Input_KeyTriggered(KEY_N) && current_level < LEVELS - 1) {
+		current_level++;
+		CP_Engine_SetNextGameStateForced(Game_Init, Game_Update, Game_Exit);
+	}
 	if (CP_Input_KeyDown(KEY_Q)) {
+		current_level = 0;
 		CP_Engine_SetNextGameState(Main_Menu_Init, Main_Menu_Update, Main_Menu_Exit);
 	}
 
 	CP_Settings_ImageMode(CP_POSITION_CORNER);
-
-	if (bg2 != NULL)
-	{
-		CP_Image_Draw(bg2, 0, 0, windowLength, windowHeight, 255);
-	}
+	CP_Image_Draw(bg2, 0, 0, windowLength, windowHeight, 255);
+	
 
 	if (GAMEOVER == 1) { // when player dies
 		Paused = 1; // pauses the game so the player has no inputs
