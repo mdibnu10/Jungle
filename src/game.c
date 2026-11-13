@@ -19,8 +19,9 @@
 MapData* current_map;
 Player knight;
 CP_Image bg, arrow, bg2;
-Enemy dummy;
+Enemy dummy[MAX_DUMMY];
 float Vec_X, Vec_Y, dist, Norm_X, Norm_Y, VDP_X, VDP_Y, VDP_dist, NVDP_X, NVDP_Y;
+Melee melee;
 
 Bullet bullets[MAX_BULLETS];
 char text[100];
@@ -85,14 +86,20 @@ void Game_Init(void)
 	knight.height = 60;
 	knight.iFrame = 0;
 	knight.iFrameTimer = 0.0f;
+	melee.width = 100;
+	melee.height = 120;
+	melee.state = 0;
+	melee.timer = 0.0f;
 
-	dummy.x = random_range(100, 1500);
-	dummy.y = random_range(100, 600);
-	dummy.width = 60;
-	dummy.height = 40;
-	dummy.counter = 10;
-	dummy.chase = 0;
-	dummy.dead = 0;
+	for (int i = 0; i < MAX_DUMMY; ++i)
+	{
+		dummy[i].x = random_range(100, 1500);
+		dummy[i].y = random_range(100, 600);
+		dummy[i].width = 60;
+		dummy[i].height = 40;
+		dummy[i].counter = 10;
+		dummy[i].chase = 0;
+	}
 
 	VDP_X = 0.0f;
 	VDP_Y = 0.0f;
@@ -111,13 +118,15 @@ void Game_Init(void)
 	bg2 = CP_Image_Load(current_map->obstacle_path);
 
 	arrow = CP_Image_Load("Assets/Arrow.png");
-	Anim_Init(&knight.idle, "Assets/Knight_Idle.png", 120, 80, 0.12f, 1);
-	Anim_Init(&knight.run, "Assets/Knight_Run.png", 120, 80, 0.12f, 1);
-	Anim_Init(&knight.attack, "Assets/Knight_Attack.png", 120, 80, 0.10f, 0);
-	Anim_Init(&dummy.idle, "Assets/Bear_Idle.png", 32, 32, 0.12f, 1);
-	Anim_Init(&dummy.run, "Assets/Bear_Run.png", 32, 32, 0.12f, 1);
-	Anim_Init(&dummy.attack, "Assets/Bear_Attack.png", 32, 32, 0.10f, 0);
-
+    Anim_Init(&knight.idle, "Assets/Knight_Idle.png", 120, 80, 0.12f, 1);
+    Anim_Init(&knight.run, "Assets/Knight_Run.png", 120, 80, 0.12f, 1);
+    Anim_Init(&knight.attack, "Assets/Knight_Attack.png", 120, 80, 0.10f, 0);
+	for (int i = 0; i < MAX_DUMMY; i++)
+	{
+		Anim_Init(&dummy[i].idle, "Assets/Bear_Idle.png", 32, 32, 0.12f, 1);
+		Anim_Init(&dummy[i].run, "Assets/Bear_Run.png", 32, 32, 0.12f, 1);
+		Anim_Init(&dummy[i].attack, "Assets/Bear_Attack.png", 32, 32, 0.10f, 0);
+	}
 	font_menu = CP_Font_Load("./Assets/Dalek.ttf");
 	CP_Font_Set(font_menu); //set the font used
 	CP_Settings_TextSize(72); //set the font size
@@ -253,11 +262,11 @@ void Game_Update(void)
 		float move_x = 0, move_y = 0;
 		if (CP_Input_KeyDown(KEY_A))
 		{
-			move_x -= 1.0f; moving = 1; knight.is_right = 0;
+			move_x -= 1.0f; moving = 1; if (melee.state != 1) knight.is_right = 0;
 		}
 		if (CP_Input_KeyDown(KEY_D))
 		{
-			move_x += 1.0f; moving = 1; knight.is_right = 1;
+			move_x += 1.0f; moving = 1; if (melee.state != 1) knight.is_right = 1;
 		}
 		if (CP_Input_KeyDown(KEY_W))
 		{
@@ -277,24 +286,87 @@ void Game_Update(void)
 		}
 	}
 	//---------------------------------------------------------------------
-	//For testing purposes
+	// Melee facing direction & hitbox
+	if (ClickedSlot == 1) {
+		if (knight.is_right) {
+			melee.x = knight.x + 25.0f;
+			melee.y = knight.y;
+		}
+		else if (!knight.is_right) {
+			melee.x = knight.x - 25.0f;
+			melee.y = knight.y;
+		}
+	}
+	//---------------------------------------------------------------------
+	//For testing purposes (hitboxes)
+	if (ClickedSlot == 1)
+	{
+		CP_Settings_Fill(CP_Color_Create(0, 255, 0, 255));
+		CP_Graphics_DrawRect(melee.x, melee.y, melee.width, melee.height);
+	}
+	CP_Settings_Fill(CP_Color_Create(0, 0, 0, 255));
 	CP_Graphics_DrawRect(knight.x, knight.y, knight.width, knight.height);
-	CP_Graphics_DrawRect(dummy.x, dummy.y, dummy.width, dummy.height);
+	for (int i = 0; i < MAX_DUMMY; ++i)
+	{
+		if (dummy[i].dead != 1)
+		{
+			CP_Graphics_DrawRect(dummy[i].x, dummy[i].y, dummy[i].width, dummy[i].height);
+		}
+	}
 	//---------------------------------------------------------------------
 	// decide the state (can't change state mid-attack)
 	if (knight.state != ATTACK && ClickedSlot == 1)
 	{
 		if (CP_Input_MouseTriggered(MOUSE_BUTTON_LEFT) && Paused != 1)
 		{
+			//---------------------------------------------------------------------
+			float mouseX = CP_Input_GetMouseX();
+			if (mouseX < knight.x)
+			{
+				knight.is_right = 0;
+				melee.state = 1;
+				melee.timer = 0.4f;
+				melee.x = knight.x - 25.0f;
+			}
+			else
+			{
+				knight.is_right = 1;
+				melee.state = 1;
+				melee.timer = 0.4f;
+				melee.x = knight.x + 25.0f;
+			}
+			//---------------------------------------------------------------------
 			knight.state = ATTACK;
 			Anim_Reset(&knight.attack);
 			CP_Sound_Play(slash);
+			//----------------------------------------------------
+			// Melee Hitbox into enemy
+			for (int i = 0; i < MAX_DUMMY; ++i)
+			{
+				if (IsSquareColliding2(dummy[i].x, dummy[i].y, dummy[i].width, dummy[i].height, melee.x, melee.y, melee.width, melee.height) && dummy[i].counter != 0 && Paused == 0 && GAMEOVER != 1)
+				{
+					dummy[i].counter--;
+				}
+			}
+			//----------------------------------------------------
 		}
 		else
 		{
 			knight.state = moving ? RUN : IDLE;
 		}
 	}
+	//---------------------------------------------------------------------
+	// Melee swing cd
+	if (melee.state == 1) {
+		if (melee.timer != 0) {
+			melee.timer -= dt;
+		}
+		if (melee.timer <= 0.0f) {
+			melee.state = 0;
+			melee.timer = 0.0f;
+		}
+	}
+	//---------------------------------------------------------------------
 	// reverse the image if player is moving left
 	float draw_width = knight.is_right == 1 ? 160 : -160;
 
@@ -368,16 +440,15 @@ void Game_Update(void)
 				bullets[i].y < -50 || bullets[i].y > 950) {
 				bullets[i].state = 0;
 			}
-			if (dummy.counter != 0) {
-				if (bullets[i].x <= dummy.x + dummy.width / 2.0f &&
-					bullets[i].x >= dummy.x - dummy.width / 2.0f &&
-					bullets[i].y <= dummy.y + dummy.height / 2.0f &&
-					bullets[i].y >= dummy.y - dummy.height / 2.0f) {
-					dummy.counter -= DummyDmgTaken;
-					if (dummy.counter < 0) {
-						dummy.counter = 0;
+			for (int y = 0; y < MAX_BULLETS; y++) {
+				if (dummy[y].counter != 0) {
+					if (bullets[i].x <= dummy[y].x + dummy[y].width / 2.0f &&
+						bullets[i].x >= dummy[y].x - dummy[y].width / 2.0f &&
+						bullets[i].y <= dummy[y].y + dummy[y].height / 2.0f &&
+						bullets[i].y >= dummy[y].y - dummy[y].height / 2.0f) {
+						dummy[y].counter -= 1;
+						bullets[i].state = 0;
 					}
-					bullets[i].state = 0;
 				}
 			}
 			for (int y = 0; y < max_obs; y++) {
@@ -420,82 +491,91 @@ void Game_Update(void)
 	}
 	/*------------------------------------------------------------------------------*/
 	//For dummy
-	for (int i = 0; i < max_obs; i++) {
-		if (IsSquareColliding(obstacle[i].x, obstacle[i].y, obstacle[i].width, obstacle[i].height, dummy.x, dummy.y, dummy.width, dummy.height, &overlapX, &overlapY)) {
-			if (overlapX < overlapY) {
-				dummy.x = (dummy.x < obstacle[i].x) ? (dummy.x -= overlapX) : (dummy.x += overlapX);
-			}
-			else {
-				dummy.y = (dummy.y < obstacle[i].y) ? (dummy.y -= overlapY) : (dummy.y += overlapY);
+	for (int i = 0; i < MAX_OBSTACLE; i++) {
+		for (int y = 0; y < MAX_DUMMY; y++)
+		{
+			if (IsSquareColliding(obstacle[i].x, obstacle[i].y, obstacle[i].width, obstacle[i].height, dummy[y].x, dummy[y].y, dummy[y].width, dummy[y].height, &overlapX, &overlapY)) {
+				if (overlapX < overlapY) {
+					dummy[y].x = (dummy[y].x < obstacle[i].x) ? (dummy[y].x -= overlapX) : (dummy[y].x += overlapX);
+				}
+				else {
+					dummy[y].y = (dummy[y].y < obstacle[i].y) ? (dummy[y].y -= overlapY) : (dummy[y].y += overlapY);
+				}
 			}
 		}
 	}
 	/*------------------------------------------------------------------------------*/
-	if (dummy.counter != 0) {
-		VDP_X = knight.x - dummy.x;
-		VDP_Y = knight.y - dummy.y;
-		// Calculate the Euclidean distance using Pythagoras Theorem
-		VDP_dist = sqrtf((VDP_X * VDP_X) + (VDP_Y * VDP_Y));
-		if (VDP_dist == 0.0f) { VDP_dist = 1.0f; }
-		// Normalize the Vector
-		NVDP_X = VDP_X / VDP_dist;
-		NVDP_Y = VDP_Y / VDP_dist;
-	}
-
-	int touching = IsSquareColliding2(dummy.x, dummy.y, dummy.width, dummy.height,
-		knight.x, knight.y, knight.width, knight.height);
-	if (VDP_dist <= 300 && dummy.counter != 0 && Paused != 1) {
-		dummy.chase = 1;
-	}
-	else {
-		dummy.chase = 0;
-	}
-
-	// only chase when not in collision
-	if (dummy.chase == 1 && !touching && dummy.state != ATTACK && GAMEOVER != 1) {
-		dummy.x += (NVDP_X * 180.0f) * dt;
-		dummy.y += (NVDP_Y * 180.0f) * dt;
-
-	}
-	if (dummy.counter != 0)
+	for (int i = 0; i < MAX_DUMMY; i++)
 	{
-		if (dummy.state != ATTACK)
+		if (dummy[i].counter != 0)
 		{
-			dummy.state = (dummy.chase == 1 && !touching) ? RUN : IDLE;
+			VDP_X = knight.x - dummy[i].x;
+			VDP_Y = knight.y - dummy[i].y;
+			// Calculate the Euclidean distance using Pythagoras Theorem
+			VDP_dist = sqrtf((VDP_X * VDP_X) + (VDP_Y * VDP_Y));
+			if (VDP_dist == 0.0f) { VDP_dist = 1.0f; }
+			// Normalize the Vector
+			NVDP_X = VDP_X / VDP_dist;
+			NVDP_Y = VDP_Y / VDP_dist;
 		}
-		dummy.is_right = knight.x > dummy.x ? 1 : 0;
-		draw_width = dummy.is_right == 1 ? 80 : -80;
-	
-		//if (dummy.state != ATTACK) {
-		//	dummy.state = dummy.chase == 1 ? RUN : IDLE;
-		//}
-		//// check if player is on which side of the enemy
-		//dummy.is_right = knight.x > dummy.x ? 1 : 0;
-		//// turns right if enemy is on the right
-		//draw_width = dummy.is_right == 1 ? 80 : -80;
 
-		switch (dummy.state)
+		int touching = IsSquareColliding2(dummy[i].x, dummy[i].y, dummy[i].width, dummy[i].height,
+			knight.x, knight.y, knight.width, knight.height);
+		if (VDP_dist <= 300 && dummy[i].counter != 0 && Paused != 1)
 		{
-		case IDLE:
-			Anim_Update(&dummy.idle, dt);
-			Anim_Draw(&dummy.idle, dummy.x, dummy.y - dummy.height / 2, draw_width, 80);
-			break;
-		case RUN:
-			Anim_Update(&dummy.run, dt);
-			Anim_Draw(&dummy.run, dummy.x, dummy.y - dummy.height / 2, draw_width, 80);
-			break;
-		case ATTACK:
-			if (Anim_Update(&dummy.attack, dt))
-			{
-				dummy.state = IDLE;
-			}
-			Anim_Draw(&dummy.attack, dummy.x, dummy.y - dummy.height / 2, draw_width, 80);
-			break;
+			dummy[i].chase = 1;
 		}
-		CP_Settings_Fill(CP_Color_Create(0, 0, 0, 255));
-		snprintf(text, sizeof(text), "%d", dummy.counter);
-		CP_Font_DrawText(text, dummy.x, dummy.y - (dummy.height / 2.0f) - 12.0f);
-		CP_Settings_TextSize(30.0f);
+		else
+		{
+			dummy[i].chase = 0;
+		}
+		// only chase when not in collision
+		if (dummy[i].chase == 1 && !touching && dummy[i].state != ATTACK && GAMEOVER != 1)
+		{
+			dummy[i].x += (NVDP_X * 180.0f) * dt;
+			dummy[i].y += (NVDP_Y * 180.0f) * dt;
+		}
+		//--------------------------------------------------
+		if (dummy[i].counter != 0)
+		{
+			if (dummy[i].state != ATTACK)
+			{
+				dummy[i].state = (dummy[i].chase == 1 && !touching) ? RUN : IDLE;
+			}
+			dummy[i].is_right = knight.x > dummy[i].x ? 1 : 0;
+			draw_width = dummy[i].is_right == 1 ? 80 : -80;
+
+			//if (dummy.state != ATTACK) {
+			//	dummy.state = dummy.chase == 1 ? RUN : IDLE;
+			//}
+			//// check if player is on which side of the enemy
+			//dummy.is_right = knight.x > dummy.x ? 1 : 0;
+			//// turns right if enemy is on the right
+			//draw_width = dummy.is_right == 1 ? 80 : -80;
+
+			switch (dummy[i].state)
+			{
+			case IDLE:
+				Anim_Update(&dummy[i].idle, dt);
+				Anim_Draw(&dummy[i].idle, dummy[i].x, dummy[i].y - dummy[i].height / 2, draw_width, 80);
+				break;
+			case RUN:
+				Anim_Update(&dummy[i].run, dt);
+				Anim_Draw(&dummy[i].run, dummy[i].x, dummy[i].y - dummy[i].height / 2, draw_width, 80);
+				break;
+			case ATTACK:
+				if (Anim_Update(&dummy[i].attack, dt))
+				{
+					dummy[i].state = IDLE;
+				}
+				Anim_Draw(&dummy[i].attack, dummy[i].x, dummy[i].y - dummy[i].height / 2, draw_width, 80);
+				break;
+			}
+			CP_Settings_Fill(CP_Color_Create(0, 0, 0, 255));
+			snprintf(text, sizeof(text), "%d", dummy[i].counter);
+			CP_Font_DrawText(text, dummy[i].x, dummy[i].y - (dummy[i].height / 2.0f) - 12.0f);
+			CP_Settings_TextSize(30.0f);
+		}
 	}
 	for (int i = 0; i < max_obs; i++) {
 		CP_Settings_Fill(CP_Color_Create(255, 0, 0, 255));
@@ -504,24 +584,28 @@ void Game_Update(void)
 	//---------------------------------------------------------
 	//Darrel
 	//---------------------------------------------------------
-	if (dummy.counter == 0 && dummy.dead == 0)
+	for (int i = 0; i < MAX_DUMMY; i++)
 	{
-		dummy.dead = 1;
-		killcount.amount++;
+		if (dummy[i].counter == 0 && dummy[i].dead == 0)
+		{
+			dummy[i].dead = 1;
+			killcount.amount++;
+		}
 	}
-
 	//Testing dummy respawn
-	if (dummy.dead == 1 && killcount.amount != 10) {
-		dummy.dead = 0;
-		do {
-			dummy.x = random_range(100, 1500);
-			dummy.y = random_range(100, 600);
-			// Calculate the Euclidean distance using Pythagoras Theorem
-			VDP_dist = sqrtf(euclidean_distance(knight.x, knight.y, dummy.x, dummy.y));
-		} while (VDP_dist <= 250.0f);
-		dummy.counter = 10;
+	for (int i = 0; i < MAX_DUMMY; i++)
+	{
+		if (dummy[i].dead == 1 && killcount.amount < 6 ) {
+			dummy[i].dead = 0;
+			do {
+				dummy[i].x = random_range(100, 1500);
+				dummy[i].y = random_range(100, 600);
+				// Calculate the Euclidean distance using Pythagoras Theorem
+				VDP_dist = sqrtf(euclidean_distance(knight.x, knight.y, dummy[i].x, dummy[i].y));
+			} while (VDP_dist <= 250.0f);
+			dummy[i].counter = 10;
+		}
 	}
-
 	//If Pause is clicked, pause the game first and stop everything.
 	if (IsAreaClicked(50, 50, 50, 50, CP_Input_GetMouseX(), CP_Input_GetMouseY()) || CP_Input_KeyTriggered(KEY_ESCAPE))
 	{
@@ -534,6 +618,24 @@ void Game_Update(void)
 			Paused = 0;
 		}
 	}
+	//If Player and Dummy collide, lose a life and reset player position.
+	//if (IsSquareCircleColliding(dummy.x, dummy.y, dummy.width, dummy.height, knight.x, knight.y, knight.size / 2.0f) && dummy.counter != 0 && Paused == 0)
+	for (int i = 0; i < MAX_DUMMY; i++)
+	{
+		if (IsSquareColliding2(dummy[i].x, dummy[i].y, dummy[i].width, dummy[i].height, knight.x, knight.y, knight.width, knight.height) && dummy[i].counter != 0 && Paused == 0 && knight.iFrame == 0 && GAMEOVER != 1) {
+			dummy[i].state = ATTACK;
+			Anim_Reset(&dummy[i].attack);
+			// Handle collision
+			HPBARHEALTH -= 5.0f;
+			hitTimer = 0.15f;
+			CP_Sound_Play(player_damage);
+			if (HPBARHEALTH < 0) {
+				HPBARHEALTH = 0;
+			}
+			knight.iFrame = 1;
+			knight.iFrameTimer = 1.0f;
+			if (ClickedSlot == 1 && CP_Input_MouseTriggered(MOUSE_BUTTON_LEFT)) { // if player and enemy collide, and player uses melee attack
+				dummy[i].counter -= 1; // enemy taking damage
 	//If Player and Dummy collide, the player loses HP.
 	if (IsSquareColliding2(dummy.x, dummy.y, dummy.width, dummy.height, knight.x, knight.y, knight.width, knight.height) && dummy.counter != 0 && Paused == 0 && knight.iFrame == 0 && GAMEOVER != 1) {
 		dummy.state = ATTACK;
@@ -561,6 +663,16 @@ void Game_Update(void)
 		if (knight.iFrameTimer <= 0.0f) {
 			knight.iFrame = 0;
 			knight.iFrameTimer = 0.0f;
+		}
+	}
+
+	//If Player and SpeedBoost collide, gain a speed boost for 5 seconds.
+	if (speedboost.collected != 1) {
+		if (IsSquareColliding2(randomX, randomY, speedboost.width, speedboost.height, knight.x, knight.y, knight.width, knight.height))
+		{
+			knight.speed += 10.0f;
+			speedboost.collected = 1;
+			effects.noOfEffects += 1;
 		}
 	}
 
