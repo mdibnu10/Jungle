@@ -20,6 +20,7 @@ Player knight;
 CP_Image bg, arrow, bg2;
 Enemy dummy;
 float Vec_X, Vec_Y, dist, Norm_X, Norm_Y, VDP_X, VDP_Y, VDP_dist, NVDP_X, NVDP_Y;
+Melee melee;
 
 Bullet bullets[MAX_BULLETS];
 char text[100];
@@ -71,6 +72,10 @@ void Game_Init(void)
 	knight.height = 60;
 	knight.iFrame = 0;
 	knight.iFrameTimer = 0.0f;
+	melee.width = 100;
+	melee.height = 120;
+	melee.state = 0;
+	melee.timer = 0.0f;
 
 	dummy.x = random_range(100, 1500);
 	dummy.y = random_range(100, 600);
@@ -211,11 +216,11 @@ void Game_Update(void)
 		float move_x = 0, move_y = 0;
 		if (CP_Input_KeyDown(KEY_A))
 		{
-			move_x -= 1.0f; moving = 1; knight.is_right = 0;
+			move_x -= 1.0f; moving = 1; if (melee.state != 1) knight.is_right = 0;
 		}
 		if (CP_Input_KeyDown(KEY_D))
 		{
-			move_x += 1.0f; moving = 1; knight.is_right = 1;
+			move_x += 1.0f; moving = 1; if (melee.state != 1) knight.is_right = 1;
 		}
 		if (CP_Input_KeyDown(KEY_W))
 		{
@@ -235,24 +240,69 @@ void Game_Update(void)
 		}
 	}
 	//---------------------------------------------------------------------
+	if (ClickedSlot == 1) {
+		if (knight.is_right) {
+			melee.x = knight.x + 25.0f;
+			melee.y = knight.y;
+		}
+		else if (!knight.is_right) {
+			melee.x = knight.x - 25.0f;
+			melee.y = knight.y;
+		}
+	}
+	//---------------------------------------------------------------------
 	//For testing purposes
+	CP_Settings_Fill(CP_Color_Create(0, 255, 0, 255));
+	CP_Graphics_DrawRect(melee.x, melee.y, melee.width, melee.height);
+	CP_Settings_Fill(CP_Color_Create(0, 0, 0, 255));
 	CP_Graphics_DrawRect(knight.x, knight.y, knight.width, knight.height);
 	CP_Graphics_DrawRect(dummy.x, dummy.y, dummy.width, dummy.height);
 	//---------------------------------------------------------------------
     // decide the state (can't change state mid-attack)
-    if (knight.state != ATTACK && ClickedSlot == 1)
-    {
+	if (knight.state != ATTACK && ClickedSlot == 1)
+	{
         if (CP_Input_MouseTriggered(MOUSE_BUTTON_LEFT) && Paused != 1)
         {
+			float mouseX = CP_Input_GetMouseX();
+			if (mouseX < knight.x) 
+			{
+				knight.is_right = 0;
+				melee.state = 1;
+				melee.timer = 0.4f;
+				melee.x = knight.x - 25.0f;
+			}
+			else 
+			{
+				knight.is_right = 1;
+				melee.state = 1;
+				melee.timer = 0.4f;
+				melee.x = knight.x + 25.0f;
+			}
 			knight.state = ATTACK;
 			Anim_Reset(&knight.attack);
 			CP_Sound_Play(slash);
+			//----------------------------------------------------
+			if (IsSquareColliding2(dummy.x, dummy.y, dummy.width, dummy.height, melee.x, melee.y, melee.width, melee.height) && dummy.counter != 0 && Paused == 0 && GAMEOVER != 1)
+			{
+				dummy.counter--;
+			}
+			//----------------------------------------------------
         }
         else
         {
         knight.state = moving ? RUN : IDLE;
         }
     }
+	// Melee test
+	if (melee.state == 1) {
+		if (melee.timer != 0) {
+			melee.timer -= dt;
+		}
+		if (melee.timer <= 0.0f) {
+			melee.state = 0;
+			melee.timer = 0.0f;
+		}
+	}
 	// reverse the image if player is moving left
     float draw_width = knight.is_right == 1 ? 160 : -160;
     
@@ -517,6 +567,7 @@ void Game_Update(void)
 			knight.iFrameTimer = 0.0f;
 		}
 	}
+
 	//If Player and SpeedBoost collide, gain a speed boost for 5 seconds.
 	if (speedboost.collected != 1) {
 		if (IsSquareColliding2(randomX, randomY, speedboost.width, speedboost.height, knight.x, knight.y, knight.width, knight.height))

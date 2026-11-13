@@ -26,6 +26,11 @@ typedef struct Animation
 
 typedef enum { IDLE, RUN, ATTACK } PlayerState;
 
+typedef struct Melee {
+	float x, y, width, height, timer;
+	int state;
+} Melee;
+
 typedef struct Player
 {
 	float x, y;
