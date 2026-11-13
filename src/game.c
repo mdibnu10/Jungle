@@ -118,9 +118,9 @@ void Game_Init(void)
 	bg2 = CP_Image_Load(current_map->obstacle_path);
 
 	arrow = CP_Image_Load("Assets/Arrow.png");
-    Anim_Init(&knight.idle, "Assets/Knight_Idle.png", 120, 80, 0.12f, 1);
-    Anim_Init(&knight.run, "Assets/Knight_Run.png", 120, 80, 0.12f, 1);
-    Anim_Init(&knight.attack, "Assets/Knight_Attack.png", 120, 80, 0.10f, 0);
+	Anim_Init(&knight.idle, "Assets/Knight_Idle.png", 120, 80, 0.12f, 1);
+	Anim_Init(&knight.run, "Assets/Knight_Run.png", 120, 80, 0.12f, 1);
+	Anim_Init(&knight.attack, "Assets/Knight_Attack.png", 120, 80, 0.10f, 0);
 	for (int i = 0; i < MAX_DUMMY; i++)
 	{
 		Anim_Init(&dummy[i].idle, "Assets/Bear_Idle.png", 32, 32, 0.12f, 1);
@@ -595,7 +595,7 @@ void Game_Update(void)
 	//Testing dummy respawn
 	for (int i = 0; i < MAX_DUMMY; i++)
 	{
-		if (dummy[i].dead == 1 && killcount.amount < 6 ) {
+		if (dummy[i].dead == 1 && killcount.amount < 6) {
 			dummy[i].dead = 0;
 			do {
 				dummy[i].x = random_range(100, 1500);
@@ -618,8 +618,7 @@ void Game_Update(void)
 			Paused = 0;
 		}
 	}
-	//If Player and Dummy collide, lose a life and reset player position.
-	//if (IsSquareCircleColliding(dummy.x, dummy.y, dummy.width, dummy.height, knight.x, knight.y, knight.size / 2.0f) && dummy.counter != 0 && Paused == 0)
+	// If Player and Dummy collide, the player loses HP.
 	for (int i = 0; i < MAX_DUMMY; i++)
 	{
 		if (IsSquareColliding2(dummy[i].x, dummy[i].y, dummy[i].width, dummy[i].height, knight.x, knight.y, knight.width, knight.height) && dummy[i].counter != 0 && Paused == 0 && knight.iFrame == 0 && GAMEOVER != 1) {
@@ -636,23 +635,9 @@ void Game_Update(void)
 			knight.iFrameTimer = 1.0f;
 			if (ClickedSlot == 1 && CP_Input_MouseTriggered(MOUSE_BUTTON_LEFT)) { // if player and enemy collide, and player uses melee attack
 				dummy[i].counter -= 1; // enemy taking damage
-	//If Player and Dummy collide, the player loses HP.
-	if (IsSquareColliding2(dummy.x, dummy.y, dummy.width, dummy.height, knight.x, knight.y, knight.width, knight.height) && dummy.counter != 0 && Paused == 0 && knight.iFrame == 0 && GAMEOVER != 1) {
-		dummy.state = ATTACK;
-		Anim_Reset(&dummy.attack);
-		// Handle collision
-		HPBARHEALTH -= enemyDmg;
-		hitTimer = 0.15f;
-		CP_Sound_Play(player_damage);
-		if (HPBARHEALTH < 0) {
-			HPBARHEALTH = 0;
-		}
-		knight.iFrame = 1;
-		knight.iFrameTimer = 1.0f;
-		if (ClickedSlot == 1 && CP_Input_MouseTriggered(MOUSE_BUTTON_LEFT)) { // if player and enemy collide, and player uses melee attack
-			dummy.counter -= 1; // enemy taking damage
-			if (dummy.counter < 0) {
-				dummy.counter = 0;
+				if (dummy[i].counter < 0) {
+					dummy[i].counter = 0;
+				}
 			}
 		}
 	}
@@ -663,16 +648,6 @@ void Game_Update(void)
 		if (knight.iFrameTimer <= 0.0f) {
 			knight.iFrame = 0;
 			knight.iFrameTimer = 0.0f;
-		}
-	}
-
-	//If Player and SpeedBoost collide, gain a speed boost for 5 seconds.
-	if (speedboost.collected != 1) {
-		if (IsSquareColliding2(randomX, randomY, speedboost.width, speedboost.height, knight.x, knight.y, knight.width, knight.height))
-		{
-			knight.speed += 10.0f;
-			speedboost.collected = 1;
-			effects.noOfEffects += 1;
 		}
 	}
 
@@ -771,9 +746,7 @@ void Game_Update(void)
 		CP_Settings_TextAlignment(CP_TEXT_ALIGN_H_CENTER, CP_TEXT_ALIGN_V_MIDDLE);
 		CP_Settings_RectMode(CP_POSITION_CENTER);
 	}
-
 	// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
 	//Draw the Heart as a a circle for now.
 	CP_Settings_Fill(CP_Color_Create(255, 70, 0, 255));
 	if (HPBARHEALTH != 0)
@@ -957,15 +930,15 @@ void Game_Update(void)
 
 	// CHI SHI
 	if (CP_Input_KeyTriggered(KEY_8))
-	{ 
+	{
 		random_map[current_level] = 0; CP_Engine_SetNextGameStateForced(Game_Init, Game_Update, Game_Exit);
 	}
 	if (CP_Input_KeyTriggered(KEY_9))
-	{ 
+	{
 		random_map[current_level] = 1; CP_Engine_SetNextGameStateForced(Game_Init, Game_Update, Game_Exit);
 	}
 	if (CP_Input_KeyTriggered(KEY_0))
-	{ 
+	{
 		random_map[current_level] = 2; CP_Engine_SetNextGameStateForced(Game_Init, Game_Update, Game_Exit);
 	}
 
@@ -981,7 +954,7 @@ void Game_Update(void)
 
 	CP_Settings_ImageMode(CP_POSITION_CORNER);
 	CP_Image_Draw(bg2, 0, 0, windowLength, windowHeight, 255);
-	
+
 
 	if (GAMEOVER == 1) { // when player dies
 		Paused = 1; // pauses the game so the player has no inputs
