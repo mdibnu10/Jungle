@@ -69,15 +69,23 @@ float KnightminX, KnightmaxX, KnightminY, KnightmaxY;
 float DummmyminX, DummymaxX, DummyminY, DummymaxY;
 float overlapX, overlapY;
 
-CP_Sound slash;
-CP_Sound bowarrow;
-CP_Sound player_damage;
-CP_Sound hp;
+CP_Sound slash, bowarrow, player_damage, hp, igm;
 
 CP_Image bow, sword, potion;
 
+CP_Color black, white, red, yellow, green, orange, blue, grey;
+
 void Game_Init(void)
 {
+	black = CP_Color_Create(0, 0, 0, 255);
+	white = CP_Color_Create(255, 255, 255, 255);
+	red = CP_Color_Create(255, 0, 0, 255);
+	yellow = CP_Color_Create(255, 255, 0, 255);
+	green = CP_Color_Create(0, 255, 0, 255);
+	orange = CP_Color_Create(255, 128, 0, 255);
+	blue = CP_Color_Create(0, 0, 255, 255);
+	grey = CP_Color_Create(130, 130, 130, 255);
+
 	knight.x = 800.0f;
 	knight.y = 450.0f;
 	knight.speed = 210.0f;
@@ -173,15 +181,15 @@ void Game_Init(void)
 	for (int i = 0; i < BOOST_COUNT; i++) {
 		effects[i].stacks = 0;
 	}
-	effects[SPEED_BOOST].color = CP_Color_Create(0, 255, 0, 255);
+	effects[SPEED_BOOST].color = green;
 	effects[SPEED_BOOST].name = "Speed Boost";
 	effects[SPEED_BOOST].description = "Move faster.";
 
-	effects[MORE_MAXHP].color = CP_Color_Create(0, 0, 255, 255);
+	effects[MORE_MAXHP].color = blue;
 	effects[MORE_MAXHP].name = "Toughness";
 	effects[MORE_MAXHP].description = "Enemies deal less damage.";
 
-	effects[DAMAGE_BOOST].color = CP_Color_Create(255, 0, 0, 255);
+	effects[DAMAGE_BOOST].color = red;
 	effects[DAMAGE_BOOST].name = "Damage Boost";
 	effects[DAMAGE_BOOST].description = "You deal higher damage.";
 
@@ -214,6 +222,7 @@ void Game_Init(void)
 	slash = CP_Sound_Load("./Assets/Audios/slashing.wav"); // sword attack sound
 	player_damage = CP_Sound_Load("./Assets/Audios/player damage.wav"); // player taking damage sound effect
 	hp = CP_Sound_Load("./Assets/Audios/potion.wav"); // potion sound effect
+	igm = CP_Sound_Load("./Assets/Audios/igm.wav"); // in game music
 
 	// items in inventory
 	bow = CP_Image_Load("./Assets/Weapons/bow.png");
@@ -221,13 +230,15 @@ void Game_Init(void)
 	potion = CP_Image_Load("./Assets/health potion.png");
 	CP_Settings_ImageMode(CP_POSITION_CORNER);
 	CP_Settings_ImageWrapMode(CP_IMAGE_WRAP_CLAMP);
+
+	CP_Sound_PlayAdvanced(igm, 0.1f, 1.0f, TRUE, CP_SOUND_GROUP_MUSIC);
 }
 
 void Game_Update(void)
 {
 	float windowLength = CP_System_GetWindowWidth();
 	float windowHeight = CP_System_GetWindowHeight();
-	CP_Graphics_ClearBackground(CP_Color_Create(80, 80, 80, 255));
+	CP_Graphics_ClearBackground(grey);
 	CP_Settings_ImageMode(CP_POSITION_CORNER);
 	CP_Image_Draw(bg, 0, 0, windowLength, windowHeight, 255);
 	float dt = CP_System_GetDt();
@@ -304,10 +315,10 @@ void Game_Update(void)
 	//For testing purposes (hitboxes)
 	if (ClickedSlot == 1)
 	{
-		CP_Settings_Fill(CP_Color_Create(0, 255, 0, 255));
+		CP_Settings_Fill(green);
 		CP_Graphics_DrawRect(melee.x, melee.y, melee.width, melee.height);
 	}
-	CP_Settings_Fill(CP_Color_Create(0, 0, 0, 255));
+	CP_Settings_Fill(black);
 	CP_Graphics_DrawRect(knight.x, knight.y, knight.width, knight.height);
 	for (int i = 0; i < MAX_DUMMY; ++i)
 	{
@@ -574,7 +585,7 @@ void Game_Update(void)
 				Anim_Draw(&dummy[i].attack, dummy[i].x, dummy[i].y - dummy[i].height / 2, draw_width, 80);
 				break;
 			}
-			CP_Settings_Fill(CP_Color_Create(0, 0, 0, 255));
+			CP_Settings_Fill(black);
 			//snprintf(text, sizeof(text), "%d", dummy[i].counter); //TEXT DRAW, CHANGING THIS!!
 			//TAG: EnemyHPUI
 
@@ -587,8 +598,8 @@ void Game_Update(void)
 			CP_Settings_RectMode(CP_POSITION_CORNER);
 
 			// foreground (current HP)
-			CP_Settings_Fill(CP_Color_Create(0, 200, 0, 255));
-			CP_Graphics_DrawRect(barX, barY, barWidth*hpPercent, barHeight);
+			CP_Settings_Fill(green);
+			CP_Graphics_DrawRect(barX, barY, barWidth * hpPercent, barHeight);
 
 			CP_Settings_RectMode(CP_POSITION_CENTER);
 
@@ -597,7 +608,7 @@ void Game_Update(void)
 		}
 	}
 	for (int i = 0; i < max_obs; i++) {
-		CP_Settings_Fill(CP_Color_Create(255, 0, 0, 255));
+		CP_Settings_Fill(red);
 		CP_Graphics_DrawRect(obstacle[i].x, obstacle[i].y, obstacle[i].width, obstacle[i].height);
 	}
 	//---------------------------------------------------------
@@ -749,13 +760,13 @@ void Game_Update(void)
 
 		// Background box
 		CP_Settings_RectMode(CP_POSITION_CORNER);
-		CP_Settings_Fill(CP_Color_Create(20, 20, 20, 230));
+		CP_Settings_Fill(grey);
 		CP_Graphics_DrawRect(boxX, boxY, boxW, boxH);
 
 		// Text
 		char buf[255];
 		CP_Settings_TextAlignment(CP_TEXT_ALIGN_H_LEFT, CP_TEXT_ALIGN_V_TOP);
-		CP_Settings_Fill(CP_Color_Create(255, 255, 255, 255));
+		CP_Settings_Fill(black);
 
 		CP_Settings_TextSize(30.0f);
 		CP_Font_DrawText(effects[hovered].name, boxX + 15.0f, boxY + 10.0f);
@@ -771,7 +782,7 @@ void Game_Update(void)
 	}
 	// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 	//Draw the Heart as a a circle for now.
-	CP_Settings_Fill(CP_Color_Create(255, 70, 0, 255));
+	CP_Settings_Fill(red);
 	if (HPBARHEALTH != 0)
 	{
 		for (int i = lives; i != 0; i--)
@@ -794,11 +805,11 @@ void Game_Update(void)
 		}
 	}
 
-	//Draw the pause button in the top right corner of the screen.
-	CP_Settings_Fill(CP_Color_Create(130, 130, 130, 255));
+	//Draw the pause button in the top left corner of the screen.
+	CP_Settings_Fill(grey);
 	CP_Settings_RectMode(CP_POSITION_CENTER);
 	CP_Graphics_DrawRect(50, 50, 50, 50);
-	CP_Settings_Fill(CP_Color_Create(0, 0, 0, 255));
+	CP_Settings_Fill(black);
 	CP_Settings_TextSize(30.0f);
 	CP_Font_DrawText("| |", 50, 50);
 
@@ -808,15 +819,15 @@ void Game_Update(void)
 	if (CP_Input_KeyTriggered(KEY_3)) { ClickedSlot = 3; }
 
 	//Draw the Inventory in white (3 boxes)
-	CP_Settings_Fill(CP_Color_Create(0, 0, 0, 255));
+	CP_Settings_Fill(black);
 	CP_Settings_RectMode(CP_POSITION_CENTER);
 
 	for (int i = 1; i <= 3; i++) {
 		if (i == ClickedSlot) {
-			CP_Settings_Fill(CP_Color_Create(235, 255, 0, 255)); // yellow colour for the selected slot
+			CP_Settings_Fill(yellow); // yellow colour for the selected slot
 		}
 		else {
-			CP_Settings_Fill(CP_Color_Create(210, 125, 25, 255)); // brown colour for the other slots
+			CP_Settings_Fill(orange); // orange colour for the other slots
 		}
 		CP_Graphics_DrawRect(windowLength / 2.0f + ((i - 2) * 120), windowHeight - 65, 100, 100);
 	}
@@ -826,25 +837,25 @@ void Game_Update(void)
 	CP_Image_Draw(potion, windowLength / 2.0f + ((1) * 120), windowHeight - 65.0f, 48.0f, 78.0f, 255); // drawing health potion in 3rd inventory slot
 
 	// level indicators
-	if (current_level == 0) { 
-		CP_Settings_Fill(CP_Color_Create(0, 0, 0, 255));
+	if (current_level == 0) {
+		CP_Settings_Fill(black);
 		CP_Settings_TextSize(50.0f);
 		CP_Font_DrawText("LEVEL 1", (windowLength / 2) - 350.0f, windowHeight - 65.0f);
 		if (GameMode == 2) GameMode = random_range(0, 1); // resetting game mode after boss level
 	}
 	else if (current_level == 1) {
-		CP_Settings_Fill(CP_Color_Create(0, 0, 0, 255));
+		CP_Settings_Fill(black);
 		CP_Settings_TextSize(50.0f);
 		CP_Font_DrawText("LEVEL 2", (windowLength / 2) - 350.0f, windowHeight - 65.0f);
 		if (GameMode == 2) GameMode = random_range(0, 1); // resetting game mode after boss level
 	}
 	else if (current_level == 2) {
-		CP_Settings_Fill(CP_Color_Create(0, 0, 0, 255));
+		CP_Settings_Fill(black);
 		CP_Settings_TextSize(50.0f);
 		CP_Font_DrawText("LEVEL 3", (windowLength / 2) - 350.0f, windowHeight - 65.0f);
 		if (GameMode == 2) GameMode = random_range(0, 1); // resetting game mode after boss level
 	}
-	else if (current_level == 3){
+	else if (current_level == 3) {
 		GameMode = 2;
 	}
 
@@ -872,24 +883,24 @@ void Game_Update(void)
 		}
 
 		CP_Settings_RectMode(CP_POSITION_CENTER);
-		CP_Settings_Fill(CP_Color_Create(255, 255, 255, 255)); // white box
+		CP_Settings_Fill(white); // white box
 		CP_Graphics_DrawRect(windowLength / 2.0f, timer.y, timer.width, timer.height);
 
 		if (timer.timeLeft <= 10.0f) {
-			CP_Settings_Fill(CP_Color_Create(255, 0, 0, 255)); // red in last 10 seconds
+			CP_Settings_Fill(red); // red in last 10 seconds
 		}
 		else {
-			CP_Settings_Fill(CP_Color_Create(0, 0, 0, 255));   // black text
+			CP_Settings_Fill(black);   // black text
 		}
 		CP_Settings_TextSize(50.0f);
 		CP_Settings_TextAlignment(CP_TEXT_ALIGN_H_CENTER, CP_TEXT_ALIGN_V_MIDDLE);
 		CP_Font_DrawText(timer.text, windowLength / 2.0f, timer.y);
 
 		if (timer.timeLeft <= 0.0f) {
-			CP_Settings_Fill(CP_Color_Create(45, 255, 0, 255));
+			CP_Settings_Fill(green);
 			CP_Settings_RectMode(CP_POSITION_CENTER);
 			CP_Graphics_DrawRect(windowLength - 200, killcount.y, 250, killcount.height);
-			CP_Settings_Fill(CP_Color_Create(0, 0, 0, 255));
+			CP_Settings_Fill(black);
 			CP_Settings_TextSize(50.0f);
 			CP_Settings_TextAlignment(CP_TEXT_ALIGN_H_CENTER, CP_TEXT_ALIGN_V_MIDDLE);
 			CP_Font_DrawText("CONTINUE", windowLength - 200, killcount.y);
@@ -900,19 +911,19 @@ void Game_Update(void)
 		snprintf(killcount.text, sizeof(killcount.text), "%02d / %02d", killcount.amount, killcount.total);
 
 		CP_Settings_RectMode(CP_POSITION_CENTER);
-		CP_Settings_Fill(CP_Color_Create(255, 255, 255, 255)); // white box
+		CP_Settings_Fill(white); // white box
 		CP_Graphics_DrawRect(windowLength / 2.0f, killcount.y, killcount.width, killcount.height);
 
-		CP_Settings_Fill(CP_Color_Create(0, 0, 0, 255));
+		CP_Settings_Fill(black);
 		CP_Settings_TextSize(50.0f);
 		CP_Settings_TextAlignment(CP_TEXT_ALIGN_H_CENTER, CP_TEXT_ALIGN_V_MIDDLE);
 		CP_Font_DrawText(killcount.text, windowLength / 2.0f, killcount.y);
 
 		if (killcount.amount == killcount.total) {
-			CP_Settings_Fill(CP_Color_Create(45, 255, 0, 255));
+			CP_Settings_Fill(green);
 			CP_Settings_RectMode(CP_POSITION_CENTER);
 			CP_Graphics_DrawRect(windowLength - 200, killcount.y, 250, killcount.height);
-			CP_Settings_Fill(CP_Color_Create(0, 0, 0, 255));
+			CP_Settings_Fill(black);
 			CP_Settings_TextSize(50.0f);
 			CP_Settings_TextAlignment(CP_TEXT_ALIGN_H_CENTER, CP_TEXT_ALIGN_V_MIDDLE);
 			CP_Font_DrawText("CONTINUE", windowLength - 200, killcount.y);
@@ -926,7 +937,7 @@ void Game_Update(void)
 		CP_Settings_RectMode(CP_POSITION_CENTER);
 		CP_Graphics_DrawRect(windowLength / 2, windowHeight / 2, windowLength, windowHeight);
 
-		CP_Settings_Fill(CP_Color_Create(0, 0, 0, 255));
+		CP_Settings_Fill(black);
 		CP_Settings_TextSize(100.0f);
 		CP_Settings_TextAlignment(CP_TEXT_ALIGN_H_CENTER, CP_TEXT_ALIGN_V_MIDDLE);
 		CP_Font_DrawText("PAUSED", windowLength / 2.0f, windowHeight / 2.0f);
@@ -936,6 +947,7 @@ void Game_Update(void)
 		{
 			CP_Engine_SetNextGameState(Main_Menu_Init, Main_Menu_Update, Main_Menu_Exit);
 			current_level = 0;
+			CP_Sound_StopAll();
 		}
 
 		//If resume button is clicked, close pause mode and resume.
@@ -945,19 +957,19 @@ void Game_Update(void)
 		}
 
 		//Menu Button
-		CP_Settings_Fill(CP_Color_Create(255, 255, 255, 255));
+		CP_Settings_Fill(white);
 		CP_Settings_RectMode(CP_POSITION_CENTER);
 		CP_Graphics_DrawRect(windowLength / 2 + 300, windowHeight / 2 + 200, 230, 100);
-		CP_Settings_Fill(CP_Color_Create(0, 0, 0, 255));
+		CP_Settings_Fill(black);
 		CP_Settings_TextSize(50.0f);
 		CP_Settings_TextAlignment(CP_TEXT_ALIGN_H_CENTER, CP_TEXT_ALIGN_V_MIDDLE);
 		CP_Font_DrawText("MENU", windowLength / 2 + 300, windowHeight / 2 + 200);
 
 		//Resume Button
-		CP_Settings_Fill(CP_Color_Create(255, 255, 255, 255));
+		CP_Settings_Fill(white);
 		CP_Settings_RectMode(CP_POSITION_CENTER);
 		CP_Graphics_DrawRect(windowLength / 2 - 300, windowHeight / 2 + 200, 230, 100);
-		CP_Settings_Fill(CP_Color_Create(0, 0, 0, 255));
+		CP_Settings_Fill(black);
 		CP_Settings_TextSize(50.0f);
 		CP_Settings_TextAlignment(CP_TEXT_ALIGN_H_CENTER, CP_TEXT_ALIGN_V_MIDDLE);
 		CP_Font_DrawText("RESUME", windowLength / 2 - 300, windowHeight / 2 + 200);
@@ -976,25 +988,43 @@ void Game_Update(void)
 	}
 
 	// CHI SHI
-	if (CP_Input_KeyTriggered(KEY_8))
+	if (CP_Input_KeyTriggered(KEY_LEFT)) // level 1
 	{
-		random_map[current_level] = 0; CP_Engine_SetNextGameStateForced(Game_Init, Game_Update, Game_Exit);
+		random_map[current_level] = random_range(0, 2); 
+		current_level = 0;
+		CP_Sound_StopAll();
+		CP_Engine_SetNextGameStateForced(Game_Init, Game_Update, Game_Exit);
 	}
-	if (CP_Input_KeyTriggered(KEY_9))
+	if (CP_Input_KeyTriggered(KEY_DOWN)) // level 2
 	{
-		random_map[current_level] = 1; CP_Engine_SetNextGameStateForced(Game_Init, Game_Update, Game_Exit);
+		random_map[current_level] = random_range(0, 2);
+		current_level = 1;
+		CP_Sound_StopAll();
+		CP_Engine_SetNextGameStateForced(Game_Init, Game_Update, Game_Exit);
 	}
-	if (CP_Input_KeyTriggered(KEY_0))
+	if (CP_Input_KeyTriggered(KEY_RIGHT)) // level 3
 	{
-		random_map[current_level] = 2; CP_Engine_SetNextGameStateForced(Game_Init, Game_Update, Game_Exit);
+		random_map[current_level] = random_range(0, 2);
+		current_level = 2;
+		CP_Sound_StopAll();
+		CP_Engine_SetNextGameStateForced(Game_Init, Game_Update, Game_Exit);
+	}
+	if (CP_Input_KeyTriggered(KEY_UP)) // boss level
+	{
+		current_level = 3;
+		CP_Sound_StopAll();
 	}
 
-	if (CP_Input_KeyTriggered(KEY_UP)) {
-		current_level++;
-	}
-	if (CP_Input_KeyTriggered(KEY_DOWN) && current_level != 0) {
-		current_level--;
-	}
+	//if (CP_Input_KeyTriggered(KEY_UP) && current_level < 2) {
+	//	current_level++;
+	//	random_map[current_level] = random_range(0, 2);
+	//	CP_Engine_SetNextGameStateForced(Game_Init, Game_Update, Game_Exit);
+	//}
+	//if (CP_Input_KeyTriggered(KEY_DOWN) && current_level != 0) {
+	//	current_level--;
+	//	random_map[current_level] = random_range(0, 2);
+	//	CP_Engine_SetNextGameStateForced(Game_Init, Game_Update, Game_Exit);
+	//}
 
 	// continue button to proceed to next level
 	if (IsAreaClicked(windowLength - 200, killcount.y, 250, killcount.height, CP_Input_GetMouseX(), CP_Input_GetMouseY()) && current_level < LEVELS - 1) {
@@ -1019,22 +1049,22 @@ void Game_Update(void)
 		CP_Graphics_DrawRect(windowLength / 2, windowHeight / 2, windowLength, windowHeight);
 
 		// game over text
-		CP_Settings_Fill(CP_Color_Create(0, 0, 0, 255));
+		CP_Settings_Fill(black);
 		CP_Settings_TextSize(100.0f);
 		CP_Settings_TextAlignment(CP_TEXT_ALIGN_H_CENTER, CP_TEXT_ALIGN_V_MIDDLE);
 		CP_Font_DrawText("GAME OVER", windowLength / 2.0f, windowHeight / 2.0f);
 
 		// reassurance over text
-		CP_Settings_Fill(CP_Color_Create(0, 0, 0, 255));
+		CP_Settings_Fill(black);
 		CP_Settings_TextSize(20.0f);
 		CP_Settings_TextAlignment(CP_TEXT_ALIGN_H_CENTER, CP_TEXT_ALIGN_V_MIDDLE);
 		CP_Font_DrawText("everybody makes mistakes...", windowLength / 2.0f, windowHeight / 2.0f + 60);
 
 		// menu button
-		CP_Settings_Fill(CP_Color_Create(255, 255, 255, 255));
+		CP_Settings_Fill(white);
 		CP_Settings_RectMode(CP_POSITION_CENTER);
 		CP_Graphics_DrawRect(windowLength / 2, windowHeight / 2 + 200, 230, 100);
-		CP_Settings_Fill(CP_Color_Create(0, 0, 0, 255));
+		CP_Settings_Fill(black);
 		CP_Settings_TextSize(50.0f);
 		CP_Settings_TextAlignment(CP_TEXT_ALIGN_H_CENTER, CP_TEXT_ALIGN_V_MIDDLE);
 		CP_Font_DrawText("MENU", windowLength / 2, windowHeight / 2 + 200);
@@ -1043,22 +1073,22 @@ void Game_Update(void)
 		if (IsAreaClicked(windowLength / 2, windowHeight / 2 + 200, 200, 100, CP_Input_GetMouseX(), CP_Input_GetMouseY()))
 		{
 			CP_Engine_SetNextGameState(Main_Menu_Init, Main_Menu_Update, Main_Menu_Exit);
+			CP_Sound_StopAll();
 		}
 	}
 
 	if (GameMode == 2) { // boss level
 		for (int i = 0; i < MAX_DUMMY; i++) { // making all alive enemies dead
-			dummy[i].dead = 1;
-			dummy[i].counter = 0;
+			dummy[i].counter = 0; // dummy health set to 0
 		}
 
 		// level indicator
-		CP_Settings_Fill(CP_Color_Create(0, 0, 0, 255));
+		CP_Settings_Fill(black);
 		CP_Settings_TextSize(50.0f);
-		CP_Font_DrawText("BOSS LEVEL", (windowLength / 2) - 350.0f, windowHeight - 65.0f); 
+		CP_Font_DrawText("BOSS LEVEL", (windowLength / 2) - 350.0f, windowHeight - 65.0f);
 
 		// boss health bar
-		CP_Settings_Fill(CP_Color_Create(255, 0, 0, 255));
+		CP_Settings_Fill(red);
 		CP_Graphics_DrawRect(windowLength / 2, killcount.y, 1000, killcount.height);
 
 
