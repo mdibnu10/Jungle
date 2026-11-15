@@ -58,7 +58,7 @@ int DummyDmgTaken;
 float boostSpawnTimer;
 
 float boostWidth;
-float boothHeight;
+float boostHeight;
 
 Effect effects[BOOST_COUNT];
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -156,7 +156,7 @@ void Game_Init(void)
 
 	//Boost Sizing
 	boostWidth = 70.0f;
-	boothHeight = 70.0f;
+	boostHeight = 70.0f;
 
 	//First boost spawns right away, the next one after boostSpawnTimer runs out
 	SpawnBoost(&boostType, &x, &y, &boostCollected, &boostSpawnTimer,
@@ -235,11 +235,14 @@ void Game_Update(void)
 	float half_height = knight.height / 2.0f;
 	int moving = 0;
 	//---------------------------------------------------------
-	//Darrel
+	//DarrelL
 	//---------------------------------------------------------
+
+
 	if (hitTimer > 0.0f && Paused == 0) {
 		hitTimer -= dt;
 	}
+
 	//Countdown only runs in the time-based mode
 	if (GameMode == 0 && GAMEOVER != 1 && Paused == 0 && timer.timeLeft > 0.0f) {
 		timer.timeLeft -= dt;
@@ -572,7 +575,23 @@ void Game_Update(void)
 				break;
 			}
 			CP_Settings_Fill(CP_Color_Create(0, 0, 0, 255));
-			snprintf(text, sizeof(text), "%d", dummy[i].counter);
+			//snprintf(text, sizeof(text), "%d", dummy[i].counter); //TEXT DRAW, CHANGING THIS!!
+			//TAG: EnemyHPUI
+
+			float barWidth = dummy[i].width;
+			float barHeight = 8.0f;
+			float barX = dummy[i].x - barWidth / 2.0f;
+			float barY = dummy[i].y + dummy[i].height / 2.0f + 10.0f;   // above the enemy's head
+			float hpPercent = (float)dummy[i].counter / 10.0f;          // Get each dummy's current HP percentage
+
+			CP_Settings_RectMode(CP_POSITION_CORNER);
+
+			// foreground (current HP)
+			CP_Settings_Fill(CP_Color_Create(0, 200, 0, 255));
+			CP_Graphics_DrawRect(barX, barY, barWidth*hpPercent, barHeight);
+
+			CP_Settings_RectMode(CP_POSITION_CENTER);
+
 			CP_Font_DrawText(text, dummy[i].x, dummy[i].y - (dummy[i].height / 2.0f) - 12.0f);
 			CP_Settings_TextSize(30.0f);
 		}
@@ -582,7 +601,7 @@ void Game_Update(void)
 		CP_Graphics_DrawRect(obstacle[i].x, obstacle[i].y, obstacle[i].width, obstacle[i].height);
 	}
 	//---------------------------------------------------------
-	//Darrel
+	//Darrell
 	//---------------------------------------------------------
 	for (int i = 0; i < MAX_DUMMY; i++)
 	{
@@ -592,7 +611,8 @@ void Game_Update(void)
 			killcount.amount++;
 		}
 	}
-	//Testing dummy respawn
+
+	//Testing dummy respawn - Not Darrell's code
 	for (int i = 0; i < MAX_DUMMY; i++)
 	{
 		if (GameMode == 2) {
@@ -670,10 +690,10 @@ void Game_Update(void)
 		// Draw the boost (only while it hasn't been collected)
 		CP_Settings_RectMode(CP_POSITION_CENTER);   // match how the collision treats x,y
 		CP_Settings_Fill(effects[boostType].color);
-		CP_Graphics_DrawRect(x, y, boostWidth, boothHeight);
+		CP_Graphics_DrawRect(x, y, boostWidth, boostHeight);
 
 		// Pickup check
-		if (IsSquareColliding2(x, y, boostWidth, boothHeight, knight.x, knight.y, knight.width, knight.height))
+		if (IsSquareColliding2(x, y, boostWidth, boostHeight, knight.x, knight.y, knight.width, knight.height))
 		{
 			switch (boostType) {
 			case SPEED_BOOST:
@@ -687,15 +707,15 @@ void Game_Update(void)
 				DummyDmgTaken += 1;
 				break;
 			}
-			effects[boostType].stacks += 1;
+			effects[boostType].stacks++;
 			boostCollected = 1;
 		}
 	}
 
 	//Draw the Effect Status Icons + hover tooltip
 	int slot = 0;
-	int hovered = -1;
-	float hoverX = 0.0f, hoverY = 0.0f;
+	int hovered = -1; // -1 means no effect is hovered
+	float hoverX = 0.0f, hoverY = 0.0f; // Coordinates of the hovered effect icon
 
 	for (int i = 0; i < BOOST_COUNT; i++) {
 		if (effects[i].stacks > 0) {
@@ -708,7 +728,7 @@ void Game_Update(void)
 			float dx = mouseX - cx; //For hovering over the effect icons
 			float dy = mouseY - cy;
 			if ((dx * dx) + (dy * dy) <= 35.0f * 35.0f) {
-				hovered = i;
+				hovered = i; // Set the hovered effect index
 				hoverX = cx;
 				hoverY = cy;
 			}
