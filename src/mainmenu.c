@@ -17,6 +17,7 @@
 
 CP_Font globalfont;
 CP_Image bg;
+CP_Sound music;
 
 // first map level 1
 float mapA1_x[] = { 976.03125f, 736.1818f, 1343.875f, 1311.8182f, 271.875f, 432.2727f, 173.5f, 335.1818f, 655.9545f, 512.2727f, 1007.96875f, 813.0f, 1183.1818f, 190.2273f };
@@ -65,6 +66,8 @@ void Main_Menu_Init(void)
 	CP_Settings_ImageMode(CP_POSITION_CORNER);
 	CP_Settings_ImageWrapMode(CP_IMAGE_WRAP_CLAMP);
 	CP_System_SetWindowSize(CP_Image_GetWidth(bg), CP_Image_GetHeight(bg));
+	music = CP_Sound_Load("./Assets/Audios/main menu music.wav");
+	CP_Sound_PlayAdvanced(music, 0.1f, 1.0f, TRUE, CP_SOUND_GROUP_MUSIC);
 }
 
 void Main_Menu_Update(void)
@@ -98,6 +101,7 @@ void Main_Menu_Update(void)
 
 	if (IsAreaClicked(area_center_x, play_height, area_width, area_height, click_x, click_y)) { // if play is clicked
 		randomize();
+		CP_Sound_StopAll();
 		CP_Engine_SetNextGameState(Game_Init, Game_Update, Game_Exit);
 	}
 
