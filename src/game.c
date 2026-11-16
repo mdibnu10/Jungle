@@ -150,6 +150,11 @@ void Game_Init(void)
 			obstacle[i].width = *(current_map->arr_w + i);
 			obstacle[i].height = *(current_map->arr_h + i);
 		}
+		// Initialise all obstacle state as 0 (deactivated)
+		for (int i = 0; i < max_obs; i++)
+		{
+			obstacle[i].state = 0;
+		}
 	}
 
 	// Preset bullet state, inactive
@@ -470,7 +475,8 @@ void Game_Update(void)
 				if (bullets[i].x <= obstacle[y].x + obstacle[y].width / 2.0f &&
 					bullets[i].x >= obstacle[y].x - obstacle[y].width / 2.0f &&
 					bullets[i].y <= obstacle[y].y + obstacle[y].height / 2.0f &&
-					bullets[i].y >= obstacle[y].y - obstacle[y].height / 2.0f) {
+					bullets[i].y >= obstacle[y].y - obstacle[y].height / 2.0f &&
+					obstacle[i].state != 0) {
 					bullets[i].state = 0;
 				}
 			}
@@ -495,7 +501,7 @@ void Game_Update(void)
 	//AABB INTERSECTION !!!!
 	// For Knight
 	for (int i = 0; i < max_obs; i++) {
-		if (IsSquareColliding(obstacle[i].x, obstacle[i].y, obstacle[i].width, obstacle[i].height, knight.x, knight.y, knight.width, knight.height, &overlapX, &overlapY)) {
+		if (IsSquareColliding(obstacle[i].x, obstacle[i].y, obstacle[i].width, obstacle[i].height, knight.x, knight.y, knight.width, knight.height, &overlapX, &overlapY) && obstacle[i].state != 0) {
 			if (overlapX < overlapY) {
 				knight.x = (knight.x < obstacle[i].x) ? (knight.x -= overlapX) : (knight.x += overlapX);
 			}
@@ -509,7 +515,7 @@ void Game_Update(void)
 	for (int i = 0; i < MAX_OBSTACLE; i++) {
 		for (int y = 0; y < MAX_DUMMY; y++)
 		{
-			if (IsSquareColliding(obstacle[i].x, obstacle[i].y, obstacle[i].width, obstacle[i].height, dummy[y].x, dummy[y].y, dummy[y].width, dummy[y].height, &overlapX, &overlapY)) {
+			if (IsSquareColliding(obstacle[i].x, obstacle[i].y, obstacle[i].width, obstacle[i].height, dummy[y].x, dummy[y].y, dummy[y].width, dummy[y].height, &overlapX, &overlapY) && obstacle[i].state != 0) {
 				if (overlapX < overlapY) {
 					dummy[y].x = (dummy[y].x < obstacle[i].x) ? (dummy[y].x -= overlapX) : (dummy[y].x += overlapX);
 				}
@@ -611,6 +617,12 @@ void Game_Update(void)
 	for (int i = 0; i < max_obs; i++) {
 		CP_Settings_Fill(red);
 		CP_Graphics_DrawRect(obstacle[i].x, obstacle[i].y, obstacle[i].width, obstacle[i].height);
+		// Activate used state
+		obstacle[i].state = 1;
+	}
+	// Reset unused obstacle state
+	for (int i = max_obs; i < MAX_OBSTACLE; i++) {
+		obstacle[i].state = 0;
 	}
 	//---------------------------------------------------------
 	//Darrell
