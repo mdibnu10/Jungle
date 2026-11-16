@@ -52,6 +52,7 @@ typedef struct {
 	float y;
 	float width;
 	float height;
+	float state;
 } Obstacle;
 //---------------------------------------------------------
 
