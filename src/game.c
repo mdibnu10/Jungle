@@ -69,7 +69,7 @@ float KnightminX, KnightmaxX, KnightminY, KnightmaxY;
 float DummmyminX, DummymaxX, DummyminY, DummymaxY;
 float overlapX, overlapY;
 
-CP_Sound slash, bowarrow, player_damage, hp, igm;
+CP_Sound slash, bowarrow, player_damage, hp, igm, player_death;
 
 CP_Image bow, sword, potion;
 
@@ -223,6 +223,7 @@ void Game_Init(void)
 	player_damage = CP_Sound_Load("./Assets/Audios/player damage.wav"); // player taking damage sound effect
 	hp = CP_Sound_Load("./Assets/Audios/potion.wav"); // potion sound effect
 	igm = CP_Sound_Load("./Assets/Audios/igm.wav"); // in game music
+	player_death = CP_Sound_Load("./Assets/Audios/player death.wav"); // player dying sound effect
 
 	// items in inventory
 	bow = CP_Image_Load("./Assets/Weapons/bow.png");
@@ -662,6 +663,9 @@ void Game_Update(void)
 			HPBARHEALTH -= 5.0f;
 			hitTimer = 0.15f;
 			CP_Sound_Play(player_damage);
+			if (HPBARHEALTH < 5.0f && lives == 1) {
+				CP_Sound_Play(player_death);
+			}
 			if (HPBARHEALTH < 0) {
 				HPBARHEALTH = 0;
 			}
@@ -818,10 +822,7 @@ void Game_Update(void)
 	if (CP_Input_KeyTriggered(KEY_2)) { ClickedSlot = 2; }
 	if (CP_Input_KeyTriggered(KEY_3)) { ClickedSlot = 3; }
 
-	//Draw the Inventory in white (3 boxes)
-	CP_Settings_Fill(black);
-	CP_Settings_RectMode(CP_POSITION_CENTER);
-
+	//Draw the Inventory (3 boxes)
 	for (int i = 1; i <= 3; i++) {
 		if (i == ClickedSlot) {
 			CP_Settings_Fill(yellow); // yellow colour for the selected slot
@@ -829,6 +830,7 @@ void Game_Update(void)
 		else {
 			CP_Settings_Fill(orange); // orange colour for the other slots
 		}
+		CP_Settings_RectMode(CP_POSITION_CENTER);
 		CP_Graphics_DrawRect(windowLength / 2.0f + ((i - 2) * 120), windowHeight - 65, 100, 100);
 	}
 
@@ -859,9 +861,9 @@ void Game_Update(void)
 		GameMode = 2;
 	}
 
-	// when slot 3 is selected and used
-	if (CP_Input_MouseTriggered(MOUSE_BUTTON_LEFT) && Paused == 0 && !IsAreaClicked(50, 50, 50, 50, CP_Input_GetMouseX(), CP_Input_GetMouseY()) && ClickedSlot == 3) {
-		if (HPBARHEALTH < knight.width) {
+	// when health potion is selected and used
+	if (CP_Input_MouseTriggered(MOUSE_BUTTON_LEFT) && Paused == 0 && ClickedSlot == 3) {
+		if (HPBARHEALTH < knight.width) { // if player is not full health -> no effect when player is at full hp
 			CP_Sound_Play(hp);
 			HPBARHEALTH += 10; // regains 10 hp
 			if (HPBARHEALTH > knight.width) {
@@ -1041,7 +1043,7 @@ void Game_Update(void)
 
 
 	if (GAMEOVER == 1) { // when player dies
-		Paused = 1; // pauses the game so the player has no inputs
+		Paused = 1; // pauses the game so the player has no inputs and no new game updates
 
 		// drawing red overlay
 		CP_Settings_Fill(CP_Color_Create(255, 0, 0, 100));
@@ -1060,17 +1062,33 @@ void Game_Update(void)
 		CP_Settings_TextAlignment(CP_TEXT_ALIGN_H_CENTER, CP_TEXT_ALIGN_V_MIDDLE);
 		CP_Font_DrawText("everybody makes mistakes...", windowLength / 2.0f, windowHeight / 2.0f + 60);
 
-		// menu button
+		// replay button
 		CP_Settings_Fill(white);
 		CP_Settings_RectMode(CP_POSITION_CENTER);
-		CP_Graphics_DrawRect(windowLength / 2, windowHeight / 2 + 200, 230, 100);
+		CP_Graphics_DrawRect(windowLength / 2 - 300, windowHeight / 2 + 200, 230, 100);
 		CP_Settings_Fill(black);
 		CP_Settings_TextSize(50.0f);
 		CP_Settings_TextAlignment(CP_TEXT_ALIGN_H_CENTER, CP_TEXT_ALIGN_V_MIDDLE);
-		CP_Font_DrawText("MENU", windowLength / 2, windowHeight / 2 + 200);
+		CP_Font_DrawText("REPLAY", windowLength / 2 - 300, windowHeight / 2 + 200);
+
+		// same logic as main menu play button previosuly
+		if (IsAreaClicked(windowLength / 2 - 300, windowHeight / 2 + 200, 200, 100, CP_Input_GetMouseX(), CP_Input_GetMouseY()))
+		{
+			CP_Engine_SetNextGameStateForced(Game_Init, Game_Update, Game_Exit);
+			CP_Sound_StopAll();
+		}
+
+		// menu button
+		CP_Settings_Fill(white);
+		CP_Settings_RectMode(CP_POSITION_CENTER);
+		CP_Graphics_DrawRect(windowLength / 2 + 300, windowHeight / 2 + 200, 230, 100);
+		CP_Settings_Fill(black);
+		CP_Settings_TextSize(50.0f);
+		CP_Settings_TextAlignment(CP_TEXT_ALIGN_H_CENTER, CP_TEXT_ALIGN_V_MIDDLE);
+		CP_Font_DrawText("MENU", windowLength / 2 + 300, windowHeight / 2 + 200);
 
 		// same logic as menu button previosuly
-		if (IsAreaClicked(windowLength / 2, windowHeight / 2 + 200, 200, 100, CP_Input_GetMouseX(), CP_Input_GetMouseY()))
+		if (IsAreaClicked(windowLength / 2 + 300, windowHeight / 2 + 200, 200, 100, CP_Input_GetMouseX(), CP_Input_GetMouseY()))
 		{
 			CP_Engine_SetNextGameState(Main_Menu_Init, Main_Menu_Update, Main_Menu_Exit);
 			CP_Sound_StopAll();
