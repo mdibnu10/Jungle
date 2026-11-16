@@ -31,7 +31,7 @@ int max_obs;
 Obstacle obstacle[MAX_OBSTACLE];
 
 //---------------------------------------------------------
-//Darrel
+//Darrell
 //---------------------------------------------------------
 Timer timer;
 KillCount killcount;
@@ -725,9 +725,7 @@ void Game_Update(void)
 			CP_Settings_Fill(effects[i].color);
 			CP_Graphics_DrawCircle(cx, cy, 70);
 
-			float dx = mouseX - cx; //For hovering over the effect icons
-			float dy = mouseY - cy;
-			if ((dx * dx) + (dy * dy) <= 35.0f * 35.0f) {
+			if (euclidean_distance(mouseX, mouseY, cx, cy) <= (boostWidth / 2.0f) * (boostWidth / 2.0f)) {
 				hovered = i; // Set the hovered effect index
 				hoverX = cx;
 				hoverY = cy;
@@ -741,7 +739,7 @@ void Game_Update(void)
 		float boxW = 300.0f;
 		float boxH = 120.0f;
 		float boxX = hoverX + 35.0f - boxW;
-		float boxY = hoverY - 35.0f - boxH - 10.0f;
+		float boxY = hoverY - 45.0f - boxH;
 		if (boxX < 0.0f)
 		{
 			boxX = 0.0f; //In case it exceeds out
@@ -862,14 +860,8 @@ void Game_Update(void)
 	if (GameMode == 0) {
 		//Timer Progression Code
 		int totalSeconds = (int)(timer.timeLeft + 0.999f);
-		static int lastSeconds = -1;
 
 		snprintf(timer.text, sizeof(timer.text), "%02d:%02d", totalSeconds / 60, totalSeconds % 60);
-
-		if (totalSeconds != lastSeconds) {
-			printf("%s\n", timer.text);
-			lastSeconds = totalSeconds;
-		}
 
 		CP_Settings_RectMode(CP_POSITION_CENTER);
 		CP_Settings_Fill(CP_Color_Create(255, 255, 255, 255)); // white box
