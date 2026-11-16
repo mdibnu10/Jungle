@@ -725,7 +725,9 @@ void Game_Update(void)
 			CP_Settings_Fill(effects[i].color);
 			CP_Graphics_DrawCircle(cx, cy, 70);
 
+
 			if (euclidean_distance(mouseX, mouseY, cx, cy) <= (boostWidth / 2.0f) * (boostWidth / 2.0f)) {
+
 				hovered = i; // Set the hovered effect index
 				hoverX = cx;
 				hoverY = cy;
