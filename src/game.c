@@ -125,15 +125,15 @@ void Game_Init(void)
 	bg = CP_Image_Load(current_map->image_path);
 	bg2 = CP_Image_Load(current_map->obstacle_path);
 
-	arrow = CP_Image_Load("Assets/Arrow.png");
-	Anim_Init(&knight.idle, "Assets/Knight_Idle.png", 120, 80, 0.12f, 1);
-	Anim_Init(&knight.run, "Assets/Knight_Run.png", 120, 80, 0.12f, 1);
-	Anim_Init(&knight.attack, "Assets/Knight_Attack.png", 120, 80, 0.10f, 0);
+	arrow = CP_Image_Load("Assets/Weapons/Arrow.png");
+	Anim_Init(&knight.idle, "Assets/Characters/Player/Knight_Idle.png", 120, 80, 0.12f, 1);
+	Anim_Init(&knight.run, "Assets/Characters/Player/Knight_Run.png", 120, 80, 0.12f, 1);
+	Anim_Init(&knight.attack, "Assets/Characters/Player/Knight_Attack.png", 120, 80, 0.10f, 0);
 	for (int i = 0; i < MAX_DUMMY; i++)
 	{
-		Anim_Init(&dummy[i].idle, "Assets/Bear_Idle.png", 32, 32, 0.12f, 1);
-		Anim_Init(&dummy[i].run, "Assets/Bear_Run.png", 32, 32, 0.12f, 1);
-		Anim_Init(&dummy[i].attack, "Assets/Bear_Attack.png", 32, 32, 0.10f, 0);
+		Anim_Init(&dummy[i].idle, "Assets/Characters/Mobs/Bear_Idle.png", 32, 32, 0.12f, 1);
+		Anim_Init(&dummy[i].run, "Assets/Characters/Mobs/Bear_Run.png", 32, 32, 0.12f, 1);
+		Anim_Init(&dummy[i].attack, "Assets/Characters/Mobs/Bear_Attack.png", 32, 32, 0.10f, 0);
 	}
 	font_menu = CP_Font_Load("./Assets/Dalek.ttf");
 	CP_Font_Set(font_menu); //set the font used
@@ -512,7 +512,7 @@ void Game_Update(void)
 	}
 	/*------------------------------------------------------------------------------*/
 	//For dummy
-	for (int i = 0; i < MAX_OBSTACLE; i++) {
+	for (int i = 0; i < max_obs; i++) {
 		for (int y = 0; y < MAX_DUMMY; y++)
 		{
 			if (IsSquareColliding(obstacle[i].x, obstacle[i].y, obstacle[i].width, obstacle[i].height, dummy[y].x, dummy[y].y, dummy[y].width, dummy[y].height, &overlapX, &overlapY) && obstacle[i].state != 0) {
@@ -938,6 +938,9 @@ void Game_Update(void)
 		}
 	}
 
+	CP_Settings_ImageMode(CP_POSITION_CORNER);
+	CP_Image_Draw(bg2, 0, 0, windowLength, windowHeight, 255);
+
 	if (Paused == 1 && GAMEOVER == 0)
 	{
 		// drawing grey overlay
@@ -1044,9 +1047,6 @@ void Game_Update(void)
 	//	CP_Engine_SetNextGameState(Main_Menu_Init, Main_Menu_Update, Main_Menu_Exit);
 	//}
 
-	CP_Settings_ImageMode(CP_POSITION_CORNER);
-	CP_Image_Draw(bg2, 0, 0, windowLength, windowHeight, 255);
-
 
 	if (GAMEOVER == 1) { // when player dies
 		Paused = 1; // pauses the game so the player has no inputs and no new game updates
@@ -1121,7 +1121,26 @@ void Game_Update(void)
 
 void Game_Exit(void)
 {
+	CP_Sound_StopAll();
+
+	CP_Sound_Free(&bowarrow);
+	CP_Sound_Free(&slash);
+	CP_Sound_Free(&player_damage);
+	CP_Sound_Free(&hp);
+	CP_Sound_Free(&igm);
+	CP_Sound_Free(&player_death);
 	CP_Font_Free(font_menu);
 	CP_Image_Free(bg);
 	CP_Image_Free(bg2);
+	CP_Image_Free(&arrow);
+	Anim_Free(&knight.idle);
+	Anim_Free(&knight.run);
+	Anim_Free(&knight.attack);
+
+	for (int i = 0; i < MAX_DUMMY; i++)
+	{
+		Anim_Free(&dummy[i].idle);
+		Anim_Free(&dummy[i].run);
+		Anim_Free(&dummy[i].attack);
+	}
 }
