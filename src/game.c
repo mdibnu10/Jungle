@@ -17,16 +17,18 @@
 #include <math.h>
 
 MapData* current_map;
+const char* exception[2] = {"Assets/Characters/Mobs/Spider_Idle.png", "Assets/Characters/Mobs/Pigeon_Fly.png"};
 Player knight;
-CP_Image bg, arrow, bg2;
+CP_Image bg, arrow, bg2, web;
 Enemy dummy[MAX_DUMMY];
 float Vec_X, Vec_Y, dist, Norm_X, Norm_Y, VDP_X, VDP_Y, VDP_dist, NVDP_X, NVDP_Y;
 Melee melee;
-
+Bullet webshots[MAX_BULLETS];
 Bullet bullets[MAX_BULLETS];
 char text[100];
 CP_Font font_menu = NULL;
-
+int dummy_width;
+int dummy_height;
 int max_obs;
 Obstacle obstacle[MAX_OBSTACLE];
 
@@ -107,6 +109,7 @@ void Game_Init(void)
 		dummy[i].height = 40;
 		dummy[i].counter = 10;
 		dummy[i].chase = 0;
+		dummy[i].shootTimer = random_range(0, 2);
 	}
 
 	VDP_X = 0.0f;
@@ -122,8 +125,11 @@ void Game_Init(void)
 
 	current_map = &maps[current_level][random_map[current_level]];
 	max_obs = current_map->size;
+	dummy_width = current_map->char_width;
+	dummy_height = current_map->char_height;
 	bg = CP_Image_Load(current_map->image_path);
 	bg2 = CP_Image_Load(current_map->obstacle_path);
+	web = CP_Image_Load("Assets/Weapons/web.png");
 
 	arrow = CP_Image_Load("Assets/Weapons/Arrow.png");
 	Anim_Init(&knight.idle, "Assets/Characters/Player/Knight_Idle.png", 120, 80, 0.12f, 1);
@@ -131,9 +137,9 @@ void Game_Init(void)
 	Anim_Init(&knight.attack, "Assets/Characters/Player/Knight_Attack.png", 120, 80, 0.10f, 0);
 	for (int i = 0; i < MAX_DUMMY; i++)
 	{
-		Anim_Init(&dummy[i].idle, "Assets/Characters/Mobs/Bear_Idle.png", 32, 32, 0.12f, 1);
-		Anim_Init(&dummy[i].run, "Assets/Characters/Mobs/Bear_Run.png", 32, 32, 0.12f, 1);
-		Anim_Init(&dummy[i].attack, "Assets/Characters/Mobs/Bear_Attack.png", 32, 32, 0.10f, 0);
+		Anim_Init(&dummy[i].idle, current_map->char_moves[0], current_map->frame_width, current_map->frame_height, 0.12f, 1);
+		Anim_Init(&dummy[i].run, current_map->char_moves[1], current_map->frame_width, current_map->frame_height, 0.12f, 1);
+		Anim_Init(&dummy[i].attack, current_map->char_moves[2], current_map->frame_width, current_map->frame_height, 0.10f, 0);
 	}
 	font_menu = CP_Font_Load("./Assets/Dalek.ttf");
 	CP_Font_Set(font_menu); //set the font used
@@ -155,6 +161,7 @@ void Game_Init(void)
 	// Preset bullet state, inactive
 	for (int i = 0; i < MAX_BULLETS; i++) {
 		bullets[i].state = 0;
+		webshots[i].state = 0;
 	}
 
 	//---------------------------------------------------------
@@ -233,6 +240,7 @@ void Game_Init(void)
 	CP_Settings_ImageWrapMode(CP_IMAGE_WRAP_CLAMP);
 
 	CP_Sound_PlayAdvanced(igm, 0.1f, 1.0f, TRUE, CP_SOUND_GROUP_MUSIC);
+	
 }
 
 void Game_Update(void)
@@ -506,20 +514,28 @@ void Game_Update(void)
 	}
 	/*------------------------------------------------------------------------------*/
 	//For dummy
-	for (int i = 0; i < max_obs; i++) {
-		for (int y = 0; y < MAX_DUMMY; y++)
-		{
-			if (IsSquareColliding(obstacle[i].x, obstacle[i].y, obstacle[i].width, obstacle[i].height, dummy[y].x, dummy[y].y, dummy[y].width, dummy[y].height, &overlapX, &overlapY)) {
-				if (overlapX < overlapY) {
-					dummy[y].x = (dummy[y].x < obstacle[i].x) ? (dummy[y].x -= overlapX) : (dummy[y].x += overlapX);
-				}
-				else {
-					dummy[y].y = (dummy[y].y < obstacle[i].y) ? (dummy[y].y -= overlapY) : (dummy[y].y += overlapY);
+	if (current_map->char_moves[0] != exception[1])
+	{
+		for (int i = 0; i < max_obs; i++) {
+			for (int y = 0; y < MAX_DUMMY; y++)
+			{
+				if (IsSquareColliding(obstacle[i].x, obstacle[i].y, obstacle[i].width, obstacle[i].height, dummy[y].x, dummy[y].y, dummy[y].width, dummy[y].height, &overlapX, &overlapY)) {
+					if (overlapX < overlapY) {
+						dummy[y].x = (dummy[y].x < obstacle[i].x) ? (dummy[y].x -= overlapX) : (dummy[y].x += overlapX);
+					}
+					else {
+						dummy[y].y = (dummy[y].y < obstacle[i].y) ? (dummy[y].y -= overlapY) : (dummy[y].y += overlapY);
+					}
 				}
 			}
 		}
 	}
 	/*------------------------------------------------------------------------------*/
+	if (current_map->char_moves[0] == exception[1])
+	{
+		CP_Settings_ImageMode(CP_POSITION_CORNER);
+		CP_Image_Draw(bg2, 0, 0, windowLength, windowHeight, 255);
+	}
 	for (int i = 0; i < MAX_DUMMY; i++)
 	{
 		if (dummy[i].counter != 0)
@@ -536,7 +552,37 @@ void Game_Update(void)
 
 		int touching = IsSquareColliding2(dummy[i].x, dummy[i].y, dummy[i].width, dummy[i].height,
 			knight.x, knight.y, knight.width, knight.height);
-		if (VDP_dist <= 300 && dummy[i].counter != 0 && Paused != 1)
+		if (dummy[i].counter != 0 && Paused != 1 && GAMEOVER != 1)
+		{
+			if (dummy[i].shootTimer > 0.0f)
+			{
+				dummy[i].shootTimer -= dt;
+			}
+			if (current_map->char_moves[0] == exception[0] && VDP_dist >= 300 && dummy[i].shootTimer <= 0.0f || current_map->char_moves[0] ==
+				exception[1] && dummy[i].shootTimer <= 0.0f)
+			{
+				for (int s = 0; s < MAX_BULLETS; s++)
+				{
+					if (webshots[s].state == 0)
+					{
+						webshots[s].x = dummy[i].x;
+						webshots[s].y = dummy[i].y;
+						webshots[s].speed_x = NVDP_X * 300;
+						webshots[s].speed_y = NVDP_Y * 300;
+						webshots[s].angle = CP_Math_Degrees(atan2f(NVDP_Y, NVDP_X));
+						webshots[s].state = 1;
+						dummy[i].shootTimer = 2.0f;
+						break;
+					}
+				}
+			}
+		}
+
+		if (VDP_dist <= 300 && dummy[i].counter != 0 && Paused != 1 && current_map->char_moves[0] != exception[1])
+		{
+			dummy[i].chase = 1;
+		}
+		else if (VDP_dist >= 300 && VDP_dist <= 500 && dummy[i].counter != 0 && Paused != 1 && current_map->char_moves[0] == exception[1])
 		{
 			dummy[i].chase = 1;
 		}
@@ -558,7 +604,7 @@ void Game_Update(void)
 				dummy[i].state = (dummy[i].chase == 1 && !touching) ? RUN : IDLE;
 			}
 			dummy[i].is_right = knight.x > dummy[i].x ? 1 : 0;
-			draw_width = dummy[i].is_right == 1 ? 80 : -80;
+			draw_width = dummy[i].is_right == 1 ? dummy_width : -dummy_width;
 
 			//if (dummy.state != ATTACK) {
 			//	dummy.state = dummy.chase == 1 ? RUN : IDLE;
@@ -572,18 +618,18 @@ void Game_Update(void)
 			{
 			case IDLE:
 				Anim_Update(&dummy[i].idle, dt);
-				Anim_Draw(&dummy[i].idle, dummy[i].x, dummy[i].y - dummy[i].height / 2, draw_width, 80);
+				Anim_Draw(&dummy[i].idle, dummy[i].x, dummy[i].y - dummy[i].height / 2, draw_width, dummy_height);
 				break;
 			case RUN:
 				Anim_Update(&dummy[i].run, dt);
-				Anim_Draw(&dummy[i].run, dummy[i].x, dummy[i].y - dummy[i].height / 2, draw_width, 80);
+				Anim_Draw(&dummy[i].run, dummy[i].x, dummy[i].y - dummy[i].height / 2, draw_width, dummy_height);
 				break;
 			case ATTACK:
 				if (Anim_Update(&dummy[i].attack, dt))
 				{
 					dummy[i].state = IDLE;
 				}
-				Anim_Draw(&dummy[i].attack, dummy[i].x, dummy[i].y - dummy[i].height / 2, draw_width, 80);
+				Anim_Draw(&dummy[i].attack, dummy[i].x, dummy[i].y - dummy[i].height / 2, draw_width, dummy_height);
 				break;
 			}
 			CP_Settings_Fill(black);
@@ -688,7 +734,63 @@ void Game_Update(void)
 			knight.iFrameTimer = 0.0f;
 		}
 	}
+	if (current_map->char_moves[0] == exception[0] || current_map->char_moves[0] == exception[1])
+	{
+		for (int s = 0; s < MAX_BULLETS; s++)
+		{
+			if (webshots[s].state != 1) continue;
 
+			if (Paused == 0 && GAMEOVER != 1)
+			{
+				webshots[s].x += webshots[s].speed_x * dt;
+				webshots[s].y += webshots[s].speed_y * dt;
+			}
+
+			// off screen -> free the slot
+			if (webshots[s].x < -50 || webshots[s].x > 1650 ||
+				webshots[s].y < -50 || webshots[s].y > 950)
+			{
+				webshots[s].state = 0;
+				continue;
+			}
+
+			// hits an obstacle -> disappear but not for birds
+			if(current_map->char_moves[0] != exception[1])
+			{
+				for (int o = 0; o < max_obs; o++)
+				{
+					if (webshots[s].x <= obstacle[o].x + obstacle[o].width / 2.0f &&
+						webshots[s].x >= obstacle[o].x - obstacle[o].width / 2.0f &&
+						webshots[s].y <= obstacle[o].y + obstacle[o].height / 2.0f &&
+						webshots[s].y >= obstacle[o].y - obstacle[o].height / 2.0f)
+					{
+						webshots[s].state = 0;
+						break;
+					}
+				}
+			}
+			if (webshots[s].state == 0) continue;
+
+			// hits the knight -> damage (respects i-frames)
+			if (webshots[s].x <= knight.x + knight.width / 2.0f &&
+				webshots[s].x >= knight.x - knight.width / 2.0f &&
+				webshots[s].y <= knight.y + knight.height / 2.0f &&
+				webshots[s].y >= knight.y - knight.height / 2.0f)
+			{
+				webshots[s].state = 0;
+				if (GAMEOVER != 1)
+				{
+					HPBARHEALTH -= 5;
+					if (HPBARHEALTH < 0) HPBARHEALTH = 0;
+					CP_Sound_Play(player_damage);
+				}
+				continue;
+			}
+
+			if (current_map->char_moves[0] == exception[0]) CP_Image_DrawSubImage(web, webshots[s].x, webshots[s].y,32, 32, 96, 225, 128, 256, 255);
+			else CP_Image_DrawSubImage(web, webshots[s].x, webshots[s].y, 64, 64, 32, 225, 64, 256, 255);
+		}
+	}
 	// Drawing UI border
 	CP_Settings_Fill(CP_Color_Create(140, 90, 50, 100));
 	CP_Settings_RectMode(CP_POSITION_CENTER);
@@ -727,6 +829,7 @@ void Game_Update(void)
 		}
 	}
 
+	
 	//Draw the Effect Status Icons + hover tooltip
 	int slot = 0;
 	int hovered = -1; // -1 means no effect is hovered
@@ -833,11 +936,16 @@ void Game_Update(void)
 		CP_Settings_RectMode(CP_POSITION_CENTER);
 		CP_Graphics_DrawRect(windowLength / 2.0f + ((i - 2) * 120), windowHeight - 65, 100, 100);
 	}
-
+	
 	CP_Image_Draw(sword, windowLength / 2.0f + ((-1) * 120), windowHeight - 65.0f, 48.0f, 100.0f, 255); // drawing sword in 1st inventory slot
 	CP_Image_Draw(bow, windowLength / 2, windowHeight - 65.0f, 60.0f, 91.0f, 255); // drawing bow in 2nd inventory slot
 	CP_Image_Draw(potion, windowLength / 2.0f + ((1) * 120), windowHeight - 65.0f, 48.0f, 78.0f, 255); // drawing health potion in 3rd inventory slot
 
+	if (current_map->char_moves[0] != exception[1])
+	{
+		CP_Settings_ImageMode(CP_POSITION_CORNER);
+		CP_Image_Draw(bg2, 0, 0, windowLength, windowHeight, 255);
+	}
 	// level indicators
 	if (current_level == 0) {
 		CP_Settings_Fill(black);
@@ -931,9 +1039,6 @@ void Game_Update(void)
 			CP_Font_DrawText("CONTINUE", windowLength - 200, killcount.y);
 		}
 	}
-
-	CP_Settings_ImageMode(CP_POSITION_CORNER);
-	CP_Image_Draw(bg2, 0, 0, windowLength, windowHeight, 255);
 
 	if (Paused == 1 && GAMEOVER == 0)
 	{

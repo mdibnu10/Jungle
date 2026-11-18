@@ -50,18 +50,23 @@ float mapC2_y[] = { 103.91f, 184.09f, 319.91f, 272.75f, 687.88f, 583.95f, 608.00
 float mapC2_w[] = { 32.00f, 31.82f, 59.09f, 42.50f, 57.75f, 32.09f, 56.45f, 31.88f, 32.38f, 43.88f, 32.25f, 37.09f };
 float mapC2_h[] = { 16.00f, 16.18f, 31.82f, 31.00f, 31.75f, 16.09f, 32.00f, 16.00f, 16.50f, 16.25f, 16.13f, 31.64f };
 
+const char* SpiderMoves[] = { "Assets/Characters/Mobs/Spider_Idle.png", "Assets/Characters/Mobs/Spider_Run.png", "Assets/Characters/Mobs/Spider_Attack.png" };
+const char* BearMoves[] = { "Assets/Characters/Mobs/Bear_Idle.png", "Assets/Characters/Mobs/Bear_Run.png", "Assets/Characters/Mobs/Bear_Attack.png" };
+const char* WolfMoves[] = { "Assets/Characters/Mobs/Wolf_Idle.png", "Assets/Characters/Mobs/Wolf_Run.png", "Assets/Characters/Mobs/Wolf_Attack.png" };
+const char* BoarMoves[] = { "Assets/Characters/Mobs/Boar_Idle.png", "Assets/Characters/Mobs/Boar_Run.png", "Assets/Characters/Mobs/Boar_Attack.png" };
+const char* PigeonMoves[] = {"Assets/Characters/Mobs/Pigeon_Fly.png", "Assets/Characters/Mobs/Pigeon_Fly.png", "Assets/Characters/Mobs/Pigeon_Fly.png"};
 
 MapData maps[LEVELS][MAPS_PER_LEVEL] =
 {
 	// Level 1: real maps
-	{ {"./Assets/Maps/A1.png", "./Assets/Maps/A1obs.png", mapA1_x, mapA1_y, mapA1_w, mapA1_h, 14}, {"./Assets/Maps/B1.png", "./Assets/Maps/B1obs.png", mapB1_x, mapB1_y, mapB1_w, mapB1_h, 15},
-	{"./Assets/Maps/C1.png", "./Assets/Maps/C1obs.png", mapC1_x, mapC1_y, mapC1_w, mapC1_h, 12}},
+	{ {"./Assets/Maps/A1.png", "./Assets/Maps/A1obs.png", BoarMoves, mapA1_x, mapA1_y, mapA1_w, mapA1_h, 14, 100, 100, 32, 32}, {"./Assets/Maps/B1.png", "./Assets/Maps/B1obs.png", WolfMoves, mapB1_x, mapB1_y, mapB1_w, mapB1_h, 15, 100, 100, 32, 32},
+	{"./Assets/Maps/C1.png", "./Assets/Maps/C1obs.png", BearMoves, mapC1_x, mapC1_y, mapC1_w, mapC1_h, 12, 80, 80, 32, 32}},
 	// Level 2: reuse lvl1 images for now as placeholders
-	{ {"./Assets/Maps/A2.png", "./Assets/Maps/A2obs.png", mapA2_x, mapA2_y, mapA2_w, mapA2_h, 14}, {"./Assets/Maps/B2.png", "./Assets/Maps/B2obs.png", mapB2_x, mapB2_y, mapB2_w, mapB2_h, 14},
-	{"./Assets/Maps/C2.png", "./Assets/Maps/C2obs.png", mapC2_x, mapC2_y, mapC2_w, mapC2_h, 12}},
+	{ {"./Assets/Maps/A2.png", "./Assets/Maps/A2obs.png", PigeonMoves, mapA2_x, mapA2_y, mapA2_w, mapA2_h, 14, 48, 48, 32, 32}, {"./Assets/Maps/B2.png", "./Assets/Maps/B2obs.png", SpiderMoves, mapB2_x, mapB2_y, mapB2_w, mapB2_h, 14, 130, 100, 130, 100},
+	{"./Assets/Maps/C2.png", "./Assets/Maps/C2obs.png", SpiderMoves, mapC2_x, mapC2_y, mapC2_w, mapC2_h, 12, 130, 100, 130, 100}},
 	// Level 3: same placeholders
-	{ {"./Assets/Maps/A1.png", "./Assets/Maps/A1obs.png", mapA1_x, mapA1_y, mapA1_w, mapA1_h, 14}, {"./Assets/Maps/B1.png", "./Assets/Maps/B1obs.png", mapB1_x, mapB1_y, mapB1_w, mapB1_h, 15},
-	{"./Assets/Maps/C1.png", "./Assets/Maps/C1obs.png", mapC1_x, mapC1_y, mapC1_w, mapC1_h, 12}},
+	{ {"./Assets/Maps/A1.png", "./Assets/Maps/A1obs.png", BoarMoves, mapA1_x, mapA1_y, mapA1_w, mapA1_h, 14, 100, 100, 32, 32}, {"./Assets/Maps/B1.png", "./Assets/Maps/B1obs.png", WolfMoves, mapB1_x, mapB1_y, mapB1_w, mapB1_h, 15, 100, 100, 32, 32},
+	{"./Assets/Maps/C1.png", "./Assets/Maps/C1obs.png", BearMoves, mapC1_x, mapC1_y, mapC1_w, mapC1_h, 12, 80, 80, 32, 32}},
 };
 int random_map[LEVELS];
 int current_level = 0;
