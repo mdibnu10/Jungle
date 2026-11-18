@@ -11,7 +11,7 @@
 #pragma once
 #include "cprocessing.h"
 
-#define LEVELS 3
+#define LEVELS 4
 #define MAPS_PER_LEVEL 3
 #define MAX_OBSTACLE 15
 #define MAX_DUMMY 5

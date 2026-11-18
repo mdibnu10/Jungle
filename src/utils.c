@@ -62,7 +62,7 @@ int Anim_Update(Animation* a, float dt)
 		if (a->frame >= a->frame_count)
 		{
 			if (a->loop) a->frame = 0;
-			else { a->frame = a->frame_count - 1; return 1; }
+			else { a->frame = a->frame_count; return 1; }
 		}
 	}
 	return 0;
@@ -167,4 +167,56 @@ void SpawnBoost(BoostType* type, float* x, float* y, int* collected, float* time
 void Anim_Free(Animation* anim)
 {
 	CP_Image_Free(&anim->img);
+}
+
+void Boss_Init(Boss* b)
+{
+	b->x = 800.0f;  b->y = 300.0f;
+	b->width = 120.0f;  b->height = 120.0f;
+	b->draw_w = 180.0f; b->draw_h = 180.0f;
+	b->speed = 90.0f;
+	b->maxHp = 100.0f;
+	b->hp = b->maxHp;
+	b->phase = 1;
+	b->is_right = 1;
+	b->state = BOSS_IDLE;
+	b->stateTimer = 1.0f;
+	b->attackCooldown = 0.0f;
+	b->contactDmg = 15;
+	Anim_Init(&b->attack, "Assets/Characters/Boss/Boss_Idle.png", 180, 180, 0.12f, 1);
+}
+
+void Boss_Update(Boss* b, float dt, float knightX, float knightY)
+{
+	if (b->state == BOSS_DEAD) return;
+
+	b->is_right = knightX > b->x;
+	Anim_Update(&b->attack, dt);
+
+	switch (b->state) {
+	case BOSS_IDLE:    break;   // later: pick next state
+	case BOSS_CHASE:   break;   // later: move toward knight
+	case BOSS_ATTACK1: break;
+	case BOSS_ATTACK2: break;
+	default: break;
+	}
+}
+
+void Boss_Draw(Boss* b)
+{
+	if (b->state == BOSS_DEAD) return;
+	float w = b->is_right ? b->draw_w : -b->draw_w;
+	Anim_Draw(&b->attack, b->x, b->y, w, b->draw_h);
+}
+
+void Boss_TakeDamage(Boss* b, float dmg)
+{
+	if (b->state == BOSS_DEAD) return;
+	b->hp -= dmg;
+	if (b->hp <= 0.0f) { b->hp = 0.0f; b->state = BOSS_DEAD; }
+}
+
+void Boss_Free(Boss* b)
+{
+	Anim_Free(&b->attack);
 }

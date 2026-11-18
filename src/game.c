@@ -77,8 +77,11 @@ CP_Image bow, sword, potion;
 
 CP_Color black, white, red, yellow, green, orange, blue, grey;
 
+Boss boss;
+
 void Game_Init(void)
 {
+	GameMode = (current_level == LEVELS - 1) ? 2 : random_range(0, 1);
 	black = CP_Color_Create(0, 0, 0, 255);
 	white = CP_Color_Create(255, 255, 255, 255);
 	red = CP_Color_Create(255, 0, 0, 255);
@@ -135,11 +138,23 @@ void Game_Init(void)
 	Anim_Init(&knight.idle, "Assets/Characters/Player/Knight_Idle.png", 120, 80, 0.12f, 1);
 	Anim_Init(&knight.run, "Assets/Characters/Player/Knight_Run.png", 120, 80, 0.12f, 1);
 	Anim_Init(&knight.attack, "Assets/Characters/Player/Knight_Attack.png", 120, 80, 0.10f, 0);
-	for (int i = 0; i < MAX_DUMMY; i++)
+	if (GameMode != 2)
 	{
-		Anim_Init(&dummy[i].idle, current_map->char_moves[0], current_map->frame_width, current_map->frame_height, 0.12f, 1);
-		Anim_Init(&dummy[i].run, current_map->char_moves[1], current_map->frame_width, current_map->frame_height, 0.12f, 1);
-		Anim_Init(&dummy[i].attack, current_map->char_moves[2], current_map->frame_width, current_map->frame_height, 0.10f, 0);
+		for (int i = 0; i < MAX_DUMMY; i++)
+		{
+			Anim_Init(&dummy[i].idle, current_map->char_moves[0], current_map->frame_width, current_map->frame_height, 0.12f, 1);
+			Anim_Init(&dummy[i].run, current_map->char_moves[1], current_map->frame_width, current_map->frame_height, 0.12f, 1);
+			Anim_Init(&dummy[i].attack, current_map->char_moves[2], current_map->frame_width, current_map->frame_height, 0.10f, 0);
+		}
+	}
+
+	if (GameMode == 2)
+	{
+		for (int i = 0; i < MAX_DUMMY; i++)
+		{
+			dummy[i].counter = 0;
+			dummy[i].dead = 1;
+		}
 	}
 	font_menu = CP_Font_Load("./Assets/Dalek.ttf");
 	CP_Font_Set(font_menu); //set the font used
@@ -218,10 +233,9 @@ void Game_Init(void)
 	killcount.height = 70.0f;
 	killcount.total = 10;
 	killcount.amount = 0;
-
-	GameMode = random_range(0, 1); // 0 for Time-Based, 1 for Kill-Based
 	GAMEOVER = 0; // Reset game over state
 	lives = 3; // Reset lives
+	if (GameMode == 2) Boss_Init(&boss);
 
 	// qusyairie -------------------------
 	// sound effects
@@ -370,6 +384,9 @@ void Game_Update(void)
 				{
 					dummy[i].counter--;
 				}
+
+				if (GameMode == 2 && IsSquareColliding2(boss.x, boss.y, boss.width, boss.height, melee.x, melee.y, melee.width, melee.height))
+					Boss_TakeDamage(&boss, DummyDmgTaken);
 			}
 			//----------------------------------------------------
 		}
@@ -653,6 +670,13 @@ void Game_Update(void)
 			CP_Font_DrawText(text, dummy[i].x, dummy[i].y - (dummy[i].height / 2.0f) - 12.0f);
 			CP_Settings_TextSize(30.0f);
 		}
+	}
+
+	if (GameMode == 2)
+	{
+		if (Paused == 0 && GAMEOVER != 1)
+			Boss_Update(&boss, dt, knight.x, knight.y);
+		Boss_Draw(&boss);
 	}
 	for (int i = 0; i < max_obs; i++) {
 		CP_Settings_Fill(red);
@@ -951,22 +975,19 @@ void Game_Update(void)
 		CP_Settings_Fill(black);
 		CP_Settings_TextSize(50.0f);
 		CP_Font_DrawText("LEVEL 1", (windowLength / 2) - 350.0f, windowHeight - 65.0f);
-		if (GameMode == 2) GameMode = random_range(0, 1); // resetting game mode after boss level
+		
 	}
 	else if (current_level == 1) {
 		CP_Settings_Fill(black);
 		CP_Settings_TextSize(50.0f);
 		CP_Font_DrawText("LEVEL 2", (windowLength / 2) - 350.0f, windowHeight - 65.0f);
-		if (GameMode == 2) GameMode = random_range(0, 1); // resetting game mode after boss level
+
 	}
 	else if (current_level == 2) {
 		CP_Settings_Fill(black);
 		CP_Settings_TextSize(50.0f);
 		CP_Font_DrawText("LEVEL 3", (windowLength / 2) - 350.0f, windowHeight - 65.0f);
-		if (GameMode == 2) GameMode = random_range(0, 1); // resetting game mode after boss level
-	}
-	else if (current_level == 3) {
-		GameMode = 2;
+
 	}
 
 	// when health potion is selected and used
@@ -1122,7 +1143,9 @@ void Game_Update(void)
 	if (CP_Input_KeyTriggered(KEY_UP)) // boss level
 	{
 		current_level = 3;
+		random_map[3] = 0;
 		CP_Sound_StopAll();
+		CP_Engine_SetNextGameStateForced(Game_Init, Game_Update, Game_Exit);
 	}
 
 	//if (CP_Input_KeyTriggered(KEY_UP) && current_level < 2) {
@@ -1201,18 +1224,16 @@ void Game_Update(void)
 	}
 
 	if (GameMode == 2) { // boss level
-		for (int i = 0; i < MAX_DUMMY; i++) { // making all alive enemies dead
-			dummy[i].counter = 0; // dummy health set to 0
-		}
-
 		// level indicator
 		CP_Settings_Fill(black);
 		CP_Settings_TextSize(50.0f);
 		CP_Font_DrawText("BOSS LEVEL", (windowLength / 2) - 350.0f, windowHeight - 65.0f);
 
 		// boss health bar
+		CP_Settings_RectMode(CP_POSITION_CORNER);
 		CP_Settings_Fill(red);
-		CP_Graphics_DrawRect(windowLength / 2, killcount.y, 1000, killcount.height);
+		CP_Graphics_DrawRect(windowLength / 2 - 500, killcount.y - killcount.height / 2, 1000 * (boss.hp / boss.maxHp), killcount.height);
+		CP_Settings_RectMode(CP_POSITION_CENTER);
 
 
 	}
@@ -1236,10 +1257,17 @@ void Game_Exit(void)
 	Anim_Free(&knight.run);
 	Anim_Free(&knight.attack);
 
-	for (int i = 0; i < MAX_DUMMY; i++)
+	if (GameMode != 2)
 	{
-		Anim_Free(&dummy[i].idle);
-		Anim_Free(&dummy[i].run);
-		Anim_Free(&dummy[i].attack);
+		for (int i = 0; i < MAX_DUMMY; i++)
+		{
+			Anim_Free(&dummy[i].idle);
+			Anim_Free(&dummy[i].run);
+			Anim_Free(&dummy[i].attack);
+		}
+	}
+	else
+	{
+		Boss_Free(&boss);
 	}
 }

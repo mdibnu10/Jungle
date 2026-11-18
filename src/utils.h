@@ -28,6 +28,35 @@ typedef struct Animation
 	int   loop;         // 1 = loops, 0 = plays once
 } Animation;
 
+typedef enum {
+	BOSS_IDLE,
+	BOSS_CHASE,
+	BOSS_ATTACK1,
+	BOSS_ATTACK2,
+	BOSS_DEAD
+} BossState;
+
+typedef struct Boss {
+	float x, y;
+	float width, height;      // hitbox
+	float draw_w, draw_h;     // sprite size
+	float speed;
+	float hp, maxHp;
+	int   phase;
+	int   is_right;
+	BossState state;
+	float stateTimer;
+	float attackCooldown;
+	int   contactDmg;
+	Animation attack;
+} Boss;
+
+void Boss_Init(Boss* b);
+void Boss_Update(Boss* b, float dt, float knightX, float knightY);
+void Boss_Draw(Boss* b);
+void Boss_TakeDamage(Boss* b, float dmg);
+void Boss_Free(Boss* b);
+
 typedef enum { IDLE, RUN, ATTACK } PlayerState;
 
 typedef struct Melee {

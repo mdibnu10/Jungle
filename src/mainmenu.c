@@ -67,6 +67,8 @@ MapData maps[LEVELS][MAPS_PER_LEVEL] =
 	// Level 3: same placeholders
 	{ {"./Assets/Maps/A1.png", "./Assets/Maps/A1obs.png", BearMoves, mapA1_x, mapA1_y, mapA1_w, mapA1_h, 14, 80, 80}, {"./Assets/Maps/B1.png", "./Assets/Maps/B1obs.png", BearMoves, mapB1_x, mapB1_y, mapB1_w, mapB1_h, 15, 80, 80},
 	{"./Assets/Maps/C1.png", "./Assets/Maps/C1obs.png", BearMoves, mapC1_x, mapC1_y, mapC1_w, mapC1_h, 12, 80, 80}},
+	// Boss level: only [0] is used
+	{ {"./Assets/Maps/A1.png", "./Assets/Maps/A1obs.png", BearMoves, mapA1_x, mapA1_y, mapA1_w, mapA1_h, 14, 80, 80, 32, 32}, {0}, {0} },
 };
 int random_map[LEVELS];
 int current_level = 0;
