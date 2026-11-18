@@ -57,6 +57,7 @@ typedef struct {
 	int chase;
 	int is_right;
 	int dead;
+	float shootTimer;
 	PlayerState state;
 	Animation idle, run, attack;
 } Enemy;
