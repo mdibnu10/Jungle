@@ -163,3 +163,8 @@ void SpawnBoost(BoostType* type, float* x, float* y, int* collected, float* time
 	*collected = 0;
 	*timer = 25.0f;
 }
+
+void Anim_Free(Animation* anim)
+{
+	CP_Image_Free(&anim->img);
+}

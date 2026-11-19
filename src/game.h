@@ -28,11 +28,16 @@ typedef struct MapData
 {
 	const char* image_path;
 	const char* obstacle_path;
+	const char** char_moves;
 	float* arr_x;
 	float* arr_y;
 	float* arr_w;
 	float* arr_h;
 	int size;
+	float char_width;
+	float char_height;
+	float frame_width;
+	float frame_height;
 } MapData;
 
 typedef struct {
