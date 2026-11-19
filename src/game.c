@@ -33,7 +33,7 @@ int max_obs;
 Obstacle obstacle[MAX_OBSTACLE];
 
 //---------------------------------------------------------
-//Darrel
+//Darrell
 //---------------------------------------------------------
 Timer timer;
 KillCount killcount;
@@ -155,6 +155,11 @@ void Game_Init(void)
 			obstacle[i].y = *(current_map->arr_y + i);
 			obstacle[i].width = *(current_map->arr_w + i);
 			obstacle[i].height = *(current_map->arr_h + i);
+		}
+		// Initialise all obstacle state as 0 (deactivated)
+		for (int i = 0; i < max_obs; i++)
+		{
+			obstacle[i].state = 0;
 		}
 	}
 
@@ -478,7 +483,8 @@ void Game_Update(void)
 				if (bullets[i].x <= obstacle[y].x + obstacle[y].width / 2.0f &&
 					bullets[i].x >= obstacle[y].x - obstacle[y].width / 2.0f &&
 					bullets[i].y <= obstacle[y].y + obstacle[y].height / 2.0f &&
-					bullets[i].y >= obstacle[y].y - obstacle[y].height / 2.0f) {
+					bullets[i].y >= obstacle[y].y - obstacle[y].height / 2.0f &&
+					obstacle[i].state != 0) {
 					bullets[i].state = 0;
 				}
 			}
@@ -503,7 +509,7 @@ void Game_Update(void)
 	//AABB INTERSECTION !!!!
 	// For Knight
 	for (int i = 0; i < max_obs; i++) {
-		if (IsSquareColliding(obstacle[i].x, obstacle[i].y, obstacle[i].width, obstacle[i].height, knight.x, knight.y, knight.width, knight.height, &overlapX, &overlapY)) {
+		if (IsSquareColliding(obstacle[i].x, obstacle[i].y, obstacle[i].width, obstacle[i].height, knight.x, knight.y, knight.width, knight.height, &overlapX, &overlapY) && obstacle[i].state != 0) {
 			if (overlapX < overlapY) {
 				knight.x = (knight.x < obstacle[i].x) ? (knight.x -= overlapX) : (knight.x += overlapX);
 			}
@@ -657,6 +663,12 @@ void Game_Update(void)
 	for (int i = 0; i < max_obs; i++) {
 		CP_Settings_Fill(red);
 		CP_Graphics_DrawRect(obstacle[i].x, obstacle[i].y, obstacle[i].width, obstacle[i].height);
+		// Activate used state
+		obstacle[i].state = 1;
+	}
+	// Reset unused obstacle state
+	for (int i = max_obs; i < MAX_OBSTACLE; i++) {
+		obstacle[i].state = 0;
 	}
 	//---------------------------------------------------------
 	//Darrell
@@ -843,9 +855,9 @@ void Game_Update(void)
 			CP_Settings_Fill(effects[i].color);
 			CP_Graphics_DrawCircle(cx, cy, 70);
 
-			float dx = mouseX - cx; //For hovering over the effect icons
-			float dy = mouseY - cy;
-			if ((dx * dx) + (dy * dy) <= 35.0f * 35.0f) {
+
+			if (euclidean_distance(mouseX, mouseY, cx, cy) <= (boostWidth / 2.0f) * (boostWidth / 2.0f)) {
+
 				hovered = i; // Set the hovered effect index
 				hoverX = cx;
 				hoverY = cy;
@@ -859,7 +871,7 @@ void Game_Update(void)
 		float boxW = 300.0f;
 		float boxH = 120.0f;
 		float boxX = hoverX + 35.0f - boxW;
-		float boxY = hoverY - 35.0f - boxH - 10.0f;
+		float boxY = hoverY - 45.0f - boxH;
 		if (boxX < 0.0f)
 		{
 			boxX = 0.0f; //In case it exceeds out
@@ -983,14 +995,8 @@ void Game_Update(void)
 	if (GameMode == 0) {
 		//Timer Progression Code
 		int totalSeconds = (int)(timer.timeLeft + 0.999f);
-		static int lastSeconds = -1;
 
 		snprintf(timer.text, sizeof(timer.text), "%02d:%02d", totalSeconds / 60, totalSeconds % 60);
-
-		if (totalSeconds != lastSeconds) {
-			printf("%s\n", timer.text);
-			lastSeconds = totalSeconds;
-		}
 
 		CP_Settings_RectMode(CP_POSITION_CENTER);
 		CP_Settings_Fill(white); // white box
