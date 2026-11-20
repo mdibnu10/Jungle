@@ -77,6 +77,11 @@ CP_Image bow, sword, potion;
 
 CP_Color black, white, red, yellow, green, orange, blue, grey;
 
+float tut_timer = 0.0f;
+int tut_showing = 1;
+
+char const* slotNum[] = {" ", "1", "2", "3" };
+
 void Game_Init(void)
 {
 	black = CP_Color_Create(0, 0, 0, 255);
@@ -244,14 +249,53 @@ void Game_Init(void)
 	CP_Settings_ImageMode(CP_POSITION_CORNER);
 	CP_Settings_ImageWrapMode(CP_IMAGE_WRAP_CLAMP);
 
-	CP_Sound_PlayAdvanced(igm, 0.1f, 1.0f, TRUE, CP_SOUND_GROUP_MUSIC);
-	
+	CP_Sound_PlayAdvanced(igm, 0.3f, 1.0f, TRUE, CP_SOUND_GROUP_MUSIC);
 }
 
 void Game_Update(void)
 {
 	float windowLength = CP_System_GetWindowWidth();
 	float windowHeight = CP_System_GetWindowHeight();
+
+	if (tut_showing) {
+		tut_timer += CP_System_GetDt();
+		CP_Graphics_ClearBackground(black);
+		float fadeDuration = 1.0f;
+		float totalDuration = 30.0f;
+		int alpha = 255;
+
+		if (tut_timer <= fadeDuration) // in the first 0.5 seconds
+		{
+			// Fade in: 0 -> 255 over the first 0.5 seconds
+			alpha = (int)((tut_timer / fadeDuration) * 255.0f); // converting time into opacity
+		}
+		else if (tut_timer >= (totalDuration - fadeDuration)) // in the last 0.5 seconds
+		{
+			// Fade out: 255 -> 0 over the last 0.5 seconds
+			alpha = (int)(((totalDuration - tut_timer) / fadeDuration) * 255.0f); // converting time into opacity
+		}
+		if (alpha < 0) alpha = 0;
+		if (alpha > 255) alpha = 255;
+
+		CP_Settings_Fill(CP_Color_Create(255, 255, 255, alpha)); // setting font color
+		CP_Settings_TextSize(50);
+		CP_Settings_TextAlignment(CP_TEXT_ALIGN_H_CENTER, CP_TEXT_ALIGN_V_MIDDLE);
+		CP_Font_DrawText("RULES", windowLength/2, 100);
+		CP_Font_DrawText("YOU HAVE 3 LIVES", windowLength / 2, 200);
+		CP_Font_DrawText("REACH THE KILL COUNT OR SURVIVE THE CLOCK", windowLength / 2, 250);
+		CP_Font_DrawText("TO PROGRESS TO THE NEXT LEVEL", windowLength / 2, 300);
+		CP_Font_DrawText("CONTROLS", windowLength / 2, 450);
+		CP_Font_DrawText("WASD TO MOVE, LEFT CLICK TO USE ITEM", windowLength / 2, 550);
+		CP_Font_DrawText("BUFFS CAN BE COLLECTED THROUGHOUT THE GAME", windowLength / 2, 600);
+		CP_Font_DrawText("PRESS ENTER TO START, GOOD LUCK", windowLength / 2, 800);
+
+		if (tut_timer >= 30.0f || CP_Input_KeyTriggered(KEY_ENTER)) {
+			tut_showing = 0;
+			CP_Graphics_ClearBackground(grey);
+		}
+		return;
+	}
+
 	CP_Graphics_ClearBackground(grey);
 	CP_Settings_ImageMode(CP_POSITION_CORNER);
 	CP_Image_Draw(bg, 0, 0, windowLength, windowHeight, 255);
@@ -925,7 +969,7 @@ void Game_Update(void)
 	}
 
 	//Draw the pause button in the top left corner of the screen.
-	CP_Settings_Fill(grey);
+	CP_Settings_Fill(white);
 	CP_Settings_RectMode(CP_POSITION_CENTER);
 	CP_Graphics_DrawRect(50, 50, 50, 50);
 	CP_Settings_Fill(black);
@@ -939,6 +983,8 @@ void Game_Update(void)
 
 	//Draw the Inventory (3 boxes)
 	for (int i = 1; i <= 3; i++) {
+		float x = windowLength / 2.0f + ((i - 2) * 120);
+		float y = windowHeight - 65;
 		if (i == ClickedSlot) {
 			CP_Settings_Fill(yellow); // yellow colour for the selected slot
 		}
@@ -947,6 +993,12 @@ void Game_Update(void)
 		}
 		CP_Settings_RectMode(CP_POSITION_CENTER);
 		CP_Graphics_DrawRect(windowLength / 2.0f + ((i - 2) * 120), windowHeight - 65, 100, 100);
+
+
+		CP_Settings_Fill(black); // black text
+		CP_Settings_TextSize(20.0f);
+		CP_Settings_TextAlignment(CP_TEXT_ALIGN_H_LEFT, CP_TEXT_ALIGN_V_TOP);
+		CP_Font_DrawText(slotNum[i], x - 42.0f, y - 42.0f);
 	}
 	
 	CP_Image_Draw(sword, windowLength / 2.0f + ((-1) * 120), windowHeight - 65.0f, 48.0f, 100.0f, 255); // drawing sword in 1st inventory slot
@@ -959,6 +1011,7 @@ void Game_Update(void)
 		CP_Image_Draw(bg2, 0, 0, windowLength, windowHeight, 255);
 	}
 	// level indicators
+	CP_Settings_TextAlignment(CP_TEXT_ALIGN_H_CENTER, CP_TEXT_ALIGN_V_MIDDLE);
 	if (current_level == 0) {
 		CP_Settings_Fill(black);
 		CP_Settings_TextSize(50.0f);
@@ -1143,10 +1196,15 @@ void Game_Update(void)
 	//}
 
 	// continue button to proceed to next level
-	if (IsAreaClicked(windowLength - 200, killcount.y, 250, killcount.height, CP_Input_GetMouseX(), CP_Input_GetMouseY()) && current_level < LEVELS - 1) {
+	if (IsAreaClicked(windowLength - 200, killcount.y, 250, killcount.height, CP_Input_GetMouseX(), CP_Input_GetMouseY()) && current_level < 2) {
 		current_level++;
 		CP_Engine_SetNextGameStateForced(Game_Init, Game_Update, Game_Exit);
 	}
+	if (IsAreaClicked(windowLength - 200, killcount.y, 250, killcount.height, CP_Input_GetMouseX(), CP_Input_GetMouseY()) && current_level == 2) {
+		current_level++;
+		GameMode = 2;
+	}
+
 	//if (CP_Input_KeyDown(KEY_Q)) {
 	//	current_level = 0;
 	//	CP_Engine_SetNextGameState(Main_Menu_Init, Main_Menu_Update, Main_Menu_Exit);
@@ -1215,11 +1273,6 @@ void Game_Update(void)
 		CP_Settings_Fill(black);
 		CP_Settings_TextSize(50.0f);
 		CP_Font_DrawText("BOSS LEVEL", (windowLength / 2) - 350.0f, windowHeight - 65.0f);
-
-		// boss health bar
-		CP_Settings_Fill(red);
-		CP_Graphics_DrawRect(windowLength / 2, killcount.y, 1000, killcount.height);
-
 
 	}
 }

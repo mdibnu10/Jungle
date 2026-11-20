@@ -16,8 +16,11 @@
 #include "utils.h"
 
 CP_Font globalfont;
-CP_Image bg;
+CP_Image bg, digipen;
 CP_Sound music;
+
+float timer = 0.0f;
+int isShow = 1;
 
 // first map level 1
 float mapA1_x[] = { 976.03125f, 736.1818f, 1343.875f, 1311.8182f, 271.875f, 432.2727f, 173.5f, 335.1818f, 655.9545f, 512.2727f, 1007.96875f, 813.0f, 1183.1818f, 190.2273f };
@@ -84,15 +87,44 @@ void Main_Menu_Init(void)
 	CP_Settings_TextAlignment(CP_TEXT_ALIGN_H_CENTER, CP_TEXT_ALIGN_V_MIDDLE);
 	CP_Graphics_ClearBackground(CP_Color_Create(80, 80, 80, 255));
 	bg = CP_Image_Load("./Assets/newbg.png");
+	digipen = CP_Image_Load("./Assets/DigiPen_BLACK.png");
 	CP_Settings_ImageMode(CP_POSITION_CORNER);
 	CP_Settings_ImageWrapMode(CP_IMAGE_WRAP_CLAMP);
 	CP_System_SetWindowSize(CP_Image_GetWidth(bg), CP_Image_GetHeight(bg));
 	music = CP_Sound_Load("./Assets/Audios/main menu music.wav");
-	CP_Sound_PlayAdvanced(music, 0.1f, 1.0f, TRUE, CP_SOUND_GROUP_MUSIC);
 }
 
 void Main_Menu_Update(void)
 {
+	if (isShow) {
+		timer += CP_System_GetDt();
+		CP_Graphics_ClearBackground(CP_Color_Create(0, 0, 0, 255));
+		float fadeDuration = 0.5f;
+		float totalDuration = 2.0f;
+		int alpha = 255;
+
+		if (timer <= fadeDuration) // in the first 0.5 seconds
+		{
+			// Fade in: 0 -> 255 over the first 0.5 seconds
+			alpha = (int)((timer / fadeDuration) * 255.0f); // converting time into opacity
+		}
+		else if (timer >= (totalDuration - fadeDuration)) // in the last 0.5 seconds
+		{
+			// Fade out: 255 -> 0 over the last 0.5 seconds
+			alpha = (int)(((totalDuration - timer) / fadeDuration) * 255.0f); // converting time into opacity
+		}
+		if (alpha < 0) alpha = 0;
+		if (alpha > 255) alpha = 255;
+
+		CP_Image_Draw(digipen, 30, 222, 1525, 425, alpha);
+
+		if (timer >= totalDuration) {
+			isShow = 0;
+			CP_Sound_PlayAdvanced(music, 0.3f, 1.0f, TRUE, CP_SOUND_GROUP_MUSIC);
+			CP_Graphics_ClearBackground(CP_Color_Create(30, 30, 30, 0));
+		}
+		return;
+	}
 	float click_x = CP_Input_GetMouseX();
 	float click_y = CP_Input_GetMouseY();
 
@@ -119,6 +151,9 @@ void Main_Menu_Update(void)
 	CP_Font_DrawText("PLAY", area_center_x, play_height); // play text
 	CP_Font_DrawText("CREDITS", area_center_x, cred_height); // credits text
 	CP_Font_DrawText("EXIT", area_center_x, exit_height); // exit text
+
+	CP_Settings_TextSize(30);
+	CP_Font_DrawText("Digipen Institute of Technology Singapore", 300, 15);
 
 	if (IsAreaClicked(area_center_x, play_height, area_width, area_height, click_x, click_y)) { // if play is clicked
 		randomize();
