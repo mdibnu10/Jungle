@@ -169,7 +169,7 @@ void Main_Menu_Update(void)
 
 	if (IsAreaClicked(area_center_x, exit_height, area_width, area_height, click_x, click_y) || isquit) { // if exit is clicked
 		isquit = 1;
-		if (isquit) {
+		//if (isquit) {
 			// drawing grey overlay
 			CP_Settings_RectMode(CP_POSITION_CORNER);
 			CP_Settings_Fill(CP_Color_Create(130, 130, 130, 100));
@@ -199,7 +199,7 @@ void Main_Menu_Update(void)
 			if (IsAreaClicked(area_center_x - 150, 400, 200, 200, click_x, click_y)) {
 				isquit = 0;
 			}
-		}		
+		//}		
 	}
 }
 
