@@ -28,7 +28,37 @@ typedef struct Animation
 	int   loop;         // 1 = loops, 0 = plays once
 } Animation;
 
-typedef enum { IDLE, RUN, ATTACK } PlayerState;
+typedef enum {
+	BOSS_IDLE,
+	BOSS_CHASE,
+	BOSS_ATTACK1,
+	BOSS_ATTACK2,
+	BOSS_DEAD
+} BossState;
+
+typedef struct Boss {
+	float x, y;
+	float width, height;      // hitbox
+	float draw_w, draw_h;     // sprite size
+	float speed;
+	float hp, maxHp;
+	int   has_hit;
+	int   is_right;
+	BossState state;
+	float stateTimer;
+	float attackCooldown;
+	float attack2Cooldown;
+	int slash;
+	Animation attack, attack2, idle, run;
+} Boss;
+
+void Boss_Init(Boss* b);
+void Boss_Update(Boss* b, float dt, float knightX, float knightY);
+void Boss_Draw(Boss* b);
+void Boss_TakeDamage(Boss* b, float dmg);
+void Boss_Free(Boss* b);
+
+typedef enum { IDLE, RUN, ATTACK, DIE } PlayerState;
 
 typedef struct Melee {
 	float x, y, width, height, timer;
@@ -45,7 +75,7 @@ typedef struct Player
 	int iFrame;
 	float iFrameTimer;
 	PlayerState state;
-	Animation idle, run, attack;
+	Animation idle, run, attack, die;
 } Player;
 
 typedef struct {
@@ -57,9 +87,10 @@ typedef struct {
 	int chase;
 	int is_right;
 	int dead;
+	int deathTimer;
 	float shootTimer;
 	PlayerState state;
-	Animation idle, run, attack;
+	Animation idle, run, attack, die;
 } Enemy;
 
 void Anim_Init(Animation* a, const char* path, int fw, int fh, float frame_time, int loop);

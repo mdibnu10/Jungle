@@ -168,3 +168,95 @@ void Anim_Free(Animation* anim)
 {
 	CP_Image_Free(&anim->img);
 }
+
+void Boss_Init(Boss* b)
+{
+	b->x = 1200.0f;  b->y = 500.0f;
+	b->width = 150.0f;  b->height = 120.0f;
+	b->draw_w = 180.0f; b->draw_h = 180.0f;
+	b->speed = 180.0f;
+	b->maxHp = 100.0f;
+	b->hp = b->maxHp;
+	b->has_hit = 0;
+	b->is_right = 1;
+	b->state = BOSS_IDLE;
+	b->stateTimer = 1.0f;
+	b->attackCooldown = 2.0f;
+	b->attack2Cooldown = 4.0f;
+	Anim_Init(&b->idle, "Assets/Characters/Boss/Boss_Idle.png", 180, 180, 0.12f, 1);
+	Anim_Init(&b->run, "Assets/Characters/Boss/Boss_Run.png", 180, 180, 0.12f, 1);
+	Anim_Init(&b->attack, "Assets/Characters/Boss/Boss_Attack.png", 180, 180, 0.05f, 0);
+	Anim_Init(&b->attack2, "Assets/Characters/Boss/Boss_Attack2.png", 180, 180, 0.05f, 0);
+}
+
+void Boss_Update(Boss* b, float dt, float knightX, float knightY)
+{
+	if (b->state == BOSS_DEAD) return;
+
+	b->is_right = knightX > b->x;
+
+	switch (b->state) {
+	case BOSS_IDLE:
+		Anim_Update(&b->idle, dt);	
+		break;   // later: pick next state
+	case BOSS_CHASE:
+		Anim_Update(&b->run, dt);
+		break;   // later: move toward knight
+	case BOSS_ATTACK1:
+		if (Anim_Update(&b->attack, dt))
+		{
+			Anim_Reset(&b->attack);
+			b->state = BOSS_IDLE;
+			b->attackCooldown = 2.0f;
+			b->has_hit = 1;
+		}
+		
+		break;
+	case BOSS_ATTACK2:
+		b->slash = 1;
+		if(Anim_Update(&b->attack, dt))
+		{
+		Anim_Reset(&b->attack);
+		b->state = BOSS_IDLE;
+		b->attack2Cooldown = 4.0f;
+		}
+		break;
+		
+	default: break;
+	}
+}
+
+void Boss_Draw(Boss* b)
+{
+	if (b->state == BOSS_DEAD) return;
+	float w = b->is_right ? b->draw_w : -b->draw_w;
+	switch (b->state) {
+	case BOSS_IDLE:
+		Anim_Draw(&b->idle, b->x, b->y, w, b->draw_h);
+		break; 
+	case BOSS_CHASE:
+		Anim_Draw(&b->run, b->x, b->y, w, b->draw_h);
+		break; 
+	case BOSS_ATTACK1: 
+		
+		Anim_Draw(&b->attack, b->x, b->y, w, b->draw_h);
+		break;
+	case BOSS_ATTACK2:
+		Anim_Draw(&b->attack2, b->x, b->y, w, b->draw_h);
+		
+		break;
+	default: break;
+	}
+}
+
+void Boss_TakeDamage(Boss* b, float dmg)
+{
+	if (b->state == BOSS_DEAD) return;
+	b->hp -= dmg;
+	if (b->hp <= 0.0f) { b->hp = 0.0f; b->state = BOSS_DEAD; }
+}
+
+void Boss_Free(Boss* b)
+{
+	Anim_Free(&b->attack);
+}

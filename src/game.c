@@ -19,17 +19,19 @@
 MapData* current_map;
 const char* exception[2] = {"Assets/Characters/Mobs/Spider_Idle.png", "Assets/Characters/Mobs/Pigeon_Fly.png"};
 Player knight;
-CP_Image bg, arrow, bg2, web;
+CP_Image bg, arrow, bg2, web, slashimg;
 Enemy dummy[MAX_DUMMY];
 float Vec_X, Vec_Y, dist, Norm_X, Norm_Y, VDP_X, VDP_Y, VDP_dist, NVDP_X, NVDP_Y;
 Melee melee;
 Bullet webshots[MAX_BULLETS];
 Bullet bullets[MAX_BULLETS];
+Bullet slashes[MAX_BULLETS];
 char text[100];
 CP_Font font_menu = NULL;
 int dummy_width;
 int dummy_height;
 int max_obs;
+float animTimer;
 Obstacle obstacle[MAX_OBSTACLE];
 
 //---------------------------------------------------------
@@ -77,6 +79,7 @@ CP_Image bow, sword, potion;
 
 CP_Color black, white, red, yellow, green, orange, blue, grey;
 
+Boss boss;
 float tut_timer = 0.0f;
 int tut_showing = 1;
 
@@ -84,6 +87,7 @@ char const* slotNum[] = {" ", "1", "2", "3" };
 
 void Game_Init(void)
 {
+	GameMode = (current_level == LEVELS - 1) ? 2 : random_range(0, 1);
 	black = CP_Color_Create(0, 0, 0, 255);
 	white = CP_Color_Create(255, 255, 255, 255);
 	red = CP_Color_Create(255, 0, 0, 255);
@@ -115,6 +119,7 @@ void Game_Init(void)
 		dummy[i].counter = 10;
 		dummy[i].chase = 0;
 		dummy[i].shootTimer = random_range(0, 2);
+		dummy[i].deathTimer = 2.0f;
 	}
 
 	VDP_X = 0.0f;
@@ -129,22 +134,37 @@ void Game_Init(void)
 	Norm_Y = 0.0f;
 
 	current_map = &maps[current_level][random_map[current_level]];
+	animTimer = current_map->char_moves[0] == exception[0] ? 0.10f : 0.30f;
 	max_obs = current_map->size;
 	dummy_width = current_map->char_width;
 	dummy_height = current_map->char_height;
 	bg = CP_Image_Load(current_map->image_path);
 	bg2 = CP_Image_Load(current_map->obstacle_path);
 	web = CP_Image_Load("Assets/Weapons/web.png");
+	slashimg = CP_Image_Load("Assets/Characters/Boss/Boss_Slash.png");
 
 	arrow = CP_Image_Load("Assets/Weapons/Arrow.png");
 	Anim_Init(&knight.idle, "Assets/Characters/Player/Knight_Idle.png", 120, 80, 0.12f, 1);
 	Anim_Init(&knight.run, "Assets/Characters/Player/Knight_Run.png", 120, 80, 0.12f, 1);
 	Anim_Init(&knight.attack, "Assets/Characters/Player/Knight_Attack.png", 120, 80, 0.10f, 0);
-	for (int i = 0; i < MAX_DUMMY; i++)
+	if (GameMode != 2)
 	{
-		Anim_Init(&dummy[i].idle, current_map->char_moves[0], current_map->frame_width, current_map->frame_height, 0.12f, 1);
-		Anim_Init(&dummy[i].run, current_map->char_moves[1], current_map->frame_width, current_map->frame_height, 0.12f, 1);
-		Anim_Init(&dummy[i].attack, current_map->char_moves[2], current_map->frame_width, current_map->frame_height, 0.10f, 0);
+		for (int i = 0; i < MAX_DUMMY; i++)
+		{
+			Anim_Init(&dummy[i].idle, current_map->char_moves[0], current_map->frame_width, current_map->frame_height, 0.12f, 1);
+			Anim_Init(&dummy[i].run, current_map->char_moves[1], current_map->frame_width, current_map->frame_height, 0.12f, 1);
+			Anim_Init(&dummy[i].attack, current_map->char_moves[2], current_map->frame_width, current_map->frame_height, 0.10f, 0);
+			Anim_Init(&dummy[i].die, current_map->char_moves[3], current_map->frame_width, current_map->frame_height, animTimer, 0);
+		}
+	}
+
+	if (GameMode == 2)
+	{
+		for (int i = 0; i < MAX_DUMMY; i++)
+		{
+			dummy[i].counter = 0;
+			dummy[i].dead = 1;
+		}
 	}
 	font_menu = CP_Font_Load("./Assets/Dalek.ttf");
 	CP_Font_Set(font_menu); //set the font used
@@ -152,8 +172,8 @@ void Game_Init(void)
 	CP_Settings_RectMode(CP_POSITION_CENTER);
 	CP_Settings_EllipseMode(CP_POSITION_CENTER);
 
-	// Obstacle Values based on one map only for testing
-	if (bg2 != NULL)
+	
+	for (int i = 0; i < max_obs; i++) 
 	{
 		for (int i = 0; i < max_obs; i++) {
 			obstacle[i].x = *(current_map->arr_x + i);
@@ -168,10 +188,12 @@ void Game_Init(void)
 		}
 	}
 
+
 	// Preset bullet state, inactive
 	for (int i = 0; i < MAX_BULLETS; i++) {
 		bullets[i].state = 0;
 		webshots[i].state = 0;
+		slashes[i].state = 0;
 	}
 
 	//---------------------------------------------------------
@@ -228,10 +250,9 @@ void Game_Init(void)
 	killcount.height = 70.0f;
 	killcount.total = 10;
 	killcount.amount = 0;
-
-	GameMode = random_range(0, 1); // 0 for Time-Based, 1 for Kill-Based
 	GAMEOVER = 0; // Reset game over state
 	lives = 3; // Reset lives
+	if (GameMode == 2) Boss_Init(&boss);
 
 	// qusyairie -------------------------
 	// sound effects
@@ -410,14 +431,21 @@ void Game_Update(void)
 			//---------------------------------------------------------------------
 			knight.state = ATTACK;
 			Anim_Reset(&knight.attack);
+			
 			CP_Sound_Play(slash);
 			//----------------------------------------------------
-			// Melee Hitbox into enemy
-			for (int i = 0; i < MAX_DUMMY; ++i)
+			// Melee Hitbox into enemy but not for birds
+			if (current_map->char_moves[0] != exception[1])
 			{
-				if (IsSquareColliding2(dummy[i].x, dummy[i].y, dummy[i].width, dummy[i].height, melee.x, melee.y, melee.width, melee.height) && dummy[i].counter != 0 && Paused == 0 && GAMEOVER != 1)
+				for (int i = 0; i < MAX_DUMMY; ++i)
 				{
-					dummy[i].counter--;
+					if (IsSquareColliding2(dummy[i].x, dummy[i].y, dummy[i].width, dummy[i].height, melee.x, melee.y, melee.width, melee.height) && dummy[i].counter != 0 && Paused == 0 && GAMEOVER != 1)
+					{
+						dummy[i].counter--;
+					}
+
+					if (GameMode == 2 && IsSquareColliding2(boss.x, boss.y, boss.width, boss.height, melee.x, melee.y, melee.width, melee.height))
+						Boss_TakeDamage(&boss, DummyDmgTaken);
 				}
 			}
 			//----------------------------------------------------
@@ -647,9 +675,9 @@ void Game_Update(void)
 			dummy[i].y += (NVDP_Y * 180.0f) * dt;
 		}
 		//--------------------------------------------------
-		if (dummy[i].counter != 0)
+		if (dummy[i].counter != 0 || (dummy[i].state == DIE && dummy[i].dead == 0))
 		{
-			if (dummy[i].state != ATTACK)
+			if (dummy[i].state != ATTACK && dummy[i].state != DIE)
 			{
 				dummy[i].state = (dummy[i].chase == 1 && !touching) ? RUN : IDLE;
 			}
@@ -681,6 +709,16 @@ void Game_Update(void)
 				}
 				Anim_Draw(&dummy[i].attack, dummy[i].x, dummy[i].y - dummy[i].height / 2, draw_width, dummy_height);
 				break;
+			case DIE:
+				if (Anim_Update(&dummy[i].die, dt))
+				{
+					dummy[i].dead = 1;
+				}
+
+				Anim_Draw(&dummy[i].die, dummy[i].x,
+					dummy[i].y - dummy[i].height / 2,
+					draw_width, dummy_height);
+				break;
 			}
 			CP_Settings_Fill(black);
 			//snprintf(text, sizeof(text), "%d", dummy[i].counter); //TEXT DRAW, CHANGING THIS!!
@@ -704,6 +742,123 @@ void Game_Update(void)
 			CP_Settings_TextSize(30.0f);
 		}
 	}
+	// ============================================= BOSS CODES ============================================================== //
+	if (GameMode == 2)
+	{
+		if (Paused == 0 && GAMEOVER != 1)
+		{
+			Boss_Update(&boss, dt, knight.x, knight.y);
+		}
+			
+		CP_Graphics_DrawRect(boss.x, boss.y, boss.width, boss.height);
+		Boss_Draw(&boss);
+		VDP_X = knight.x - boss.x;
+		VDP_Y = knight.y - boss.y;
+		// Calculate the Euclidean distance using Pythagoras Theorem
+		VDP_dist = sqrtf((VDP_X * VDP_X) + (VDP_Y * VDP_Y));
+		if (VDP_dist == 0.0f) { VDP_dist = 1.0f; }
+		// Normalize the Vector
+		NVDP_X = VDP_X / VDP_dist;
+		NVDP_Y = VDP_Y / VDP_dist;
+
+		int touching = IsSquareColliding2(boss.x, boss.y, boss.width, boss.height,
+			knight.x, knight.y, knight.width, knight.height);
+		
+		if (boss.state != BOSS_ATTACK1 &&
+			boss.state != BOSS_ATTACK2)
+		{
+			if (boss.attackCooldown <= 0) boss.has_hit = 0;
+			if (boss.attack2Cooldown > 0.0f) boss.attack2Cooldown -= dt;
+			if (touching == 1 && boss.has_hit == 0)
+			{
+				boss.state = BOSS_ATTACK1;
+				HPBARHEALTH -= 10.0f;
+			}
+			else if (boss.has_hit == 1)
+			{
+				boss.attackCooldown -= dt;
+			}
+			else if (VDP_dist > 100 && boss.attack2Cooldown <= 0.0f)
+			{
+				boss.state = BOSS_ATTACK2;
+				boss.slash = 0;
+				Anim_Reset(&boss.attack);
+			}
+			else if (VDP_dist <= 600 && touching != 1 && boss.has_hit == 0)
+			{
+				boss.state = BOSS_CHASE;
+				boss.x += (NVDP_X * boss.speed) * dt;
+				boss.y += (NVDP_Y * boss.speed) * dt;
+			}
+		}
+	}
+
+
+	if (GameMode == 2 && boss.slash == 1)
+	{
+		boss.slash = 2;   // fired, don't spawn again
+		for (int s = 0; s < MAX_BULLETS; s++)
+		{
+			if (slashes[s].state == 0)
+			{
+				slashes[s].x = boss.x;
+				slashes[s].y = boss.y;
+				slashes[s].speed_x = NVDP_X * 350.0f;
+				slashes[s].speed_y = NVDP_Y * 350.0f;
+				slashes[s].angle = CP_Math_Degrees(atan2f(NVDP_Y, NVDP_X));
+				slashes[s].size = 40.0f;
+				slashes[s].state = 1;
+				break;
+			}
+		}
+	}
+
+	for (int s = 0; s < MAX_BULLETS; s++)
+	{
+		if (slashes[s].state != 1) continue;
+
+		if (Paused == 0 && GAMEOVER != 1)
+		{
+			slashes[s].x += slashes[s].speed_x * dt;
+			slashes[s].y += slashes[s].speed_y * dt;
+		}
+
+		if (slashes[s].x < -50 || slashes[s].x > 1650 ||
+			slashes[s].y < -50 || slashes[s].y > 950)
+		{
+			slashes[s].state = 0;
+			continue;
+		}
+
+		if (IsSquareColliding2(slashes[s].x, slashes[s].y, slashes[s].size, slashes[s].size,
+			knight.x, knight.y, knight.width, knight.height))
+		{
+			slashes[s].state = 0;
+			if (knight.iFrame == 0 && GAMEOVER != 1)
+			{
+				HPBARHEALTH -= 10.0f;
+				if (HPBARHEALTH < 0) HPBARHEALTH = 0;
+				CP_Sound_Play(player_damage);
+				knight.iFrame = 1;
+				knight.iFrameTimer = 1.0f;
+			}
+			continue;
+		}
+
+		// placeholder blue slash, swap for a sprite later
+		CP_Settings_RectMode(CP_POSITION_CENTER);
+		CP_Settings_Fill(CP_Color_Create(80, 160, 255, 220));
+		//CP_Graphics_DrawRectAdvanced(slashes[s].x, slashes[s].y, slashes[s].size * 1.5f, 12.0f, slashes[s].angle, 6.0f);
+		CP_Image_DrawAdvanced(slashimg, slashes[s].x, slashes[s].y, 128, 128, 255, slashes[s].angle);
+	}
+
+
+
+
+
+
+	// ======================================================================================================== //
+	if (GameMode != 2)
 	for (int i = 0; i < max_obs; i++) {
 		CP_Settings_Fill(red);
 		CP_Graphics_DrawRect(obstacle[i].x, obstacle[i].y, obstacle[i].width, obstacle[i].height);
@@ -721,10 +876,15 @@ void Game_Update(void)
 	{
 		if (dummy[i].counter == 0 && dummy[i].dead == 0)
 		{
-			dummy[i].dead = 1;
-			killcount.amount++;
+			if (dummy[i].state != DIE)          // runs once, on the frame it dies
+			{
+				dummy[i].state = DIE;
+				Anim_Reset(&dummy[i].die);
+				killcount.amount++;
+			}
 		}
 	}
+
 
 	//Testing dummy respawn - Not Darrell's code
 	for (int i = 0; i < MAX_DUMMY; i++)
@@ -741,6 +901,8 @@ void Game_Update(void)
 				VDP_dist = sqrtf(euclidean_distance(knight.x, knight.y, dummy[i].x, dummy[i].y));
 			} while (VDP_dist <= 250.0f);
 			dummy[i].counter = 10;
+			dummy[i].deathTimer = 2.0f;
+			dummy[i].state = IDLE;
 		}
 	}
 	//If Pause is clicked, pause the game first and stop everything.
@@ -767,6 +929,7 @@ void Game_Update(void)
 			CP_Sound_Play(player_damage);
 			if (HPBARHEALTH < 5.0f && lives == 1) {
 				CP_Sound_Play(player_death);
+				knight.state = DIE;
 			}
 			if (HPBARHEALTH < 0) {
 				HPBARHEALTH = 0;
@@ -811,7 +974,7 @@ void Game_Update(void)
 			}
 
 			// hits an obstacle -> disappear but not for birds
-			if(current_map->char_moves[0] != exception[1])
+			if (current_map->char_moves[0] != exception[1])
 			{
 				for (int o = 0; o < max_obs; o++)
 				{
@@ -836,7 +999,7 @@ void Game_Update(void)
 				webshots[s].state = 0;
 				if (GAMEOVER != 1)
 				{
-					HPBARHEALTH -= 5;
+					HPBARHEALTH -= current_map->char_moves[0] == exception[0] ? 5 : 0.5f;
 					if (HPBARHEALTH < 0) HPBARHEALTH = 0;
 					CP_Sound_Play(player_damage);
 				}
@@ -1016,22 +1179,19 @@ void Game_Update(void)
 		CP_Settings_Fill(black);
 		CP_Settings_TextSize(50.0f);
 		CP_Font_DrawText("LEVEL 1", (windowLength / 2) - 350.0f, windowHeight - 65.0f);
-		if (GameMode == 2) GameMode = random_range(0, 1); // resetting game mode after boss level
+		
 	}
 	else if (current_level == 1) {
 		CP_Settings_Fill(black);
 		CP_Settings_TextSize(50.0f);
 		CP_Font_DrawText("LEVEL 2", (windowLength / 2) - 350.0f, windowHeight - 65.0f);
-		if (GameMode == 2) GameMode = random_range(0, 1); // resetting game mode after boss level
+
 	}
 	else if (current_level == 2) {
 		CP_Settings_Fill(black);
 		CP_Settings_TextSize(50.0f);
 		CP_Font_DrawText("LEVEL 3", (windowLength / 2) - 350.0f, windowHeight - 65.0f);
-		if (GameMode == 2) GameMode = random_range(0, 1); // resetting game mode after boss level
-	}
-	else if (current_level == 3) {
-		GameMode = 2;
+
 	}
 
 	// when health potion is selected and used
@@ -1181,7 +1341,9 @@ void Game_Update(void)
 	if (CP_Input_KeyTriggered(KEY_UP)) // boss level
 	{
 		current_level = 3;
+		random_map[3] = 0;
 		CP_Sound_StopAll();
+		CP_Engine_SetNextGameStateForced(Game_Init, Game_Update, Game_Exit);
 	}
 
 	//if (CP_Input_KeyTriggered(KEY_UP) && current_level < 2) {
@@ -1265,14 +1427,17 @@ void Game_Update(void)
 	}
 
 	if (GameMode == 2) { // boss level
-		for (int i = 0; i < MAX_DUMMY; i++) { // making all alive enemies dead
-			dummy[i].counter = 0; // dummy health set to 0
-		}
-
 		// level indicator
 		CP_Settings_Fill(black);
 		CP_Settings_TextSize(50.0f);
 		CP_Font_DrawText("BOSS LEVEL", (windowLength / 2) - 350.0f, windowHeight - 65.0f);
+
+		// boss health bar
+		CP_Settings_RectMode(CP_POSITION_CORNER);
+		CP_Settings_Fill(red);
+		CP_Graphics_DrawRect(windowLength / 2 - 500, killcount.y - killcount.height / 2, 1000 * (boss.hp / boss.maxHp), killcount.height);
+		CP_Settings_RectMode(CP_POSITION_CENTER);
+
 
 	}
 }
@@ -1295,10 +1460,17 @@ void Game_Exit(void)
 	Anim_Free(&knight.run);
 	Anim_Free(&knight.attack);
 
-	for (int i = 0; i < MAX_DUMMY; i++)
+	if (GameMode != 2)
 	{
-		Anim_Free(&dummy[i].idle);
-		Anim_Free(&dummy[i].run);
-		Anim_Free(&dummy[i].attack);
+		for (int i = 0; i < MAX_DUMMY; i++)
+		{
+			Anim_Free(&dummy[i].idle);
+			Anim_Free(&dummy[i].run);
+			Anim_Free(&dummy[i].attack);
+		}
+	}
+	else
+	{
+		Boss_Free(&boss);
 	}
 }

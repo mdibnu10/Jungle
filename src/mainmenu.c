@@ -54,12 +54,17 @@ float mapC2_x[] = { 543.91f, 687.91f, 591.36f, 180.75f, 204.63f, 640.14f, 924.32
 float mapC2_y[] = { 103.91f, 184.09f, 319.91f, 272.75f, 687.88f, 583.95f, 608.00f, 743.88f, 728.13f, 456.13f, 263.94f, 320.00f };
 float mapC2_w[] = { 32.00f, 31.82f, 59.09f, 42.50f, 57.75f, 32.09f, 56.45f, 31.88f, 32.38f, 43.88f, 32.25f, 37.09f };
 float mapC2_h[] = { 16.00f, 16.18f, 31.82f, 31.00f, 31.75f, 16.09f, 32.00f, 16.00f, 16.50f, 16.25f, 16.13f, 31.64f };
+// boss map
+float mapBoss_x[] = { 800.0f,  800.0f,   40.0f, 1555.0f };
+float mapBoss_y[] = { 39.0f,  835.0f,  450.0f,  450.0f };
+float mapBoss_w[] = { 1600.0f, 1600.0f,   80.0f,   90.0f };
+float mapBoss_h[] = { 78.0f,  130.0f,  900.0f,  900.0f };
 
-const char* SpiderMoves[] = { "Assets/Characters/Mobs/Spider_Idle.png", "Assets/Characters/Mobs/Spider_Run.png", "Assets/Characters/Mobs/Spider_Attack.png" };
-const char* BearMoves[] = { "Assets/Characters/Mobs/Bear_Idle.png", "Assets/Characters/Mobs/Bear_Run.png", "Assets/Characters/Mobs/Bear_Attack.png" };
-const char* WolfMoves[] = { "Assets/Characters/Mobs/Wolf_Idle.png", "Assets/Characters/Mobs/Wolf_Run.png", "Assets/Characters/Mobs/Wolf_Attack.png" };
-const char* BoarMoves[] = { "Assets/Characters/Mobs/Boar_Idle.png", "Assets/Characters/Mobs/Boar_Run.png", "Assets/Characters/Mobs/Boar_Attack.png" };
-const char* PigeonMoves[] = {"Assets/Characters/Mobs/Pigeon_Fly.png", "Assets/Characters/Mobs/Pigeon_Fly.png", "Assets/Characters/Mobs/Pigeon_Fly.png"};
+const char* SpiderMoves[] = { "Assets/Characters/Mobs/Spider_Idle.png", "Assets/Characters/Mobs/Spider_Run.png", "Assets/Characters/Mobs/Spider_Attack.png", "Assets/Characters/Mobs/Spider_Dead.png" };
+const char* BearMoves[] = { "Assets/Characters/Mobs/Bear_Idle.png", "Assets/Characters/Mobs/Bear_Run.png", "Assets/Characters/Mobs/Bear_Attack.png", "Assets/Characters/Mobs/Bear_Dead.png"};
+const char* WolfMoves[] = { "Assets/Characters/Mobs/Wolf_Idle.png", "Assets/Characters/Mobs/Wolf_Run.png", "Assets/Characters/Mobs/Wolf_Attack.png", "Assets/Characters/Mobs/Wolf_Dead.png" };
+const char* BoarMoves[] = { "Assets/Characters/Mobs/Boar_Idle.png", "Assets/Characters/Mobs/Boar_Run.png", "Assets/Characters/Mobs/Boar_Attack.png", "Assets/Characters/Mobs/Boar_Dead.png" };
+const char* PigeonMoves[] = {"Assets/Characters/Mobs/Pigeon_Fly.png", "Assets/Characters/Mobs/Pigeon_Fly.png", "Assets/Characters/Mobs/Pigeon_Fly.png", "Assets/Characters/Mobs/Bear_Dead.png" };
 
 MapData maps[LEVELS][MAPS_PER_LEVEL] =
 {
@@ -70,8 +75,10 @@ MapData maps[LEVELS][MAPS_PER_LEVEL] =
 	{ {"./Assets/Maps/A2.png", "./Assets/Maps/A2obs.png", PigeonMoves, mapA2_x, mapA2_y, mapA2_w, mapA2_h, 14, 48, 48, 32, 32}, {"./Assets/Maps/B2.png", "./Assets/Maps/B2obs.png", SpiderMoves, mapB2_x, mapB2_y, mapB2_w, mapB2_h, 14, 130, 100, 130, 100},
 	{"./Assets/Maps/C2.png", "./Assets/Maps/C2obs.png", SpiderMoves, mapC2_x, mapC2_y, mapC2_w, mapC2_h, 12, 130, 100, 130, 100}},
 	// Level 3: same placeholders
-	{ {"./Assets/Maps/A1.png", "./Assets/Maps/A1obs.png", BoarMoves, mapA1_x, mapA1_y, mapA1_w, mapA1_h, 14, 100, 100, 32, 32}, {"./Assets/Maps/B1.png", "./Assets/Maps/B1obs.png", WolfMoves, mapB1_x, mapB1_y, mapB1_w, mapB1_h, 15, 100, 100, 32, 32},
-	{"./Assets/Maps/C1.png", "./Assets/Maps/C1obs.png", BearMoves, mapC1_x, mapC1_y, mapC1_w, mapC1_h, 12, 80, 80, 32, 32}},
+	{ {"./Assets/Maps/A1.png", "./Assets/Maps/A1obs.png", BearMoves, mapA1_x, mapA1_y, mapA1_w, mapA1_h, 14, 80, 80}, {"./Assets/Maps/B1.png", "./Assets/Maps/B1obs.png", BearMoves, mapB1_x, mapB1_y, mapB1_w, mapB1_h, 15, 80, 80},
+	{"./Assets/Maps/C1.png", "./Assets/Maps/C1obs.png", BearMoves, mapC1_x, mapC1_y, mapC1_w, mapC1_h, 12, 80, 80}},
+	// Boss level: only [0] is used
+	{ {"./Assets/Maps/bossmap.png", NULL, BearMoves, mapBoss_x, mapBoss_y, mapBoss_w, mapBoss_h, 4, 80, 80, 32, 32}, {0}, {0} },
 };
 int random_map[LEVELS];
 int current_level = 0;
