@@ -176,37 +176,36 @@ void Main_Menu_Update(void)
 
 	if (IsAreaClicked(area_center_x, exit_height, area_width, area_height, click_x, click_y) || isquit) { // if exit is clicked
 		isquit = 1;
-		if (isquit) {
-			// drawing grey overlay
-			CP_Settings_RectMode(CP_POSITION_CORNER);
-			CP_Settings_Fill(CP_Color_Create(130, 130, 130, 100));
-			CP_Graphics_DrawRect(0, 0, 1600, 900);
 
-			// drawing pop up
-			CP_Settings_RectMode(CP_POSITION_CENTER);
-			CP_Settings_Fill(CP_Color_Create(16, 45, 2, 255));
-			CP_Graphics_DrawRect(area_center_x, 400, 600, 600);
+		// drawing grey overlay
+		CP_Settings_RectMode(CP_POSITION_CORNER);
+		CP_Settings_Fill(CP_Color_Create(130, 130, 130, 100));
+		CP_Graphics_DrawRect(0, 0, 1600, 900);
 
-			// drawing yes and no buttons
-			CP_Settings_Fill(CP_Color_Create(127, 98, 72, 255));
-			CP_Graphics_DrawRect(area_center_x - 150, 400, 200, 200);
-			CP_Graphics_DrawRect(area_center_x + 150, 400, 200, 200);
-			CP_Settings_Fill(CP_Color_Create(0, 0, 0, 255)); // setting font color
-			CP_Settings_TextSize(50);
-			CP_Font_DrawText("QUIT?", area_center_x, 200);
-			CP_Font_DrawText("NO", area_center_x - 150, 400);
-			CP_Font_DrawText("YES", area_center_x + 150, 400);
+		// drawing pop up
+		CP_Settings_RectMode(CP_POSITION_CENTER);
+		CP_Settings_Fill(CP_Color_Create(16, 45, 2, 255));
+		CP_Graphics_DrawRect(area_center_x, 400, 600, 600);
 
-			// if yes
-			if (IsAreaClicked(area_center_x + 150, 400, 200, 200, click_x, click_y)) {
-				CP_Engine_Terminate();
-			}
+		// drawing yes and no buttons
+		CP_Settings_Fill(CP_Color_Create(127, 98, 72, 255));
+		CP_Graphics_DrawRect(area_center_x - 150, 400, 200, 200);
+		CP_Graphics_DrawRect(area_center_x + 150, 400, 200, 200);
+		CP_Settings_Fill(CP_Color_Create(0, 0, 0, 255)); // setting font color
+		CP_Settings_TextSize(50);
+		CP_Font_DrawText("QUIT?", area_center_x, 200);
+		CP_Font_DrawText("NO", area_center_x - 150, 400);
+		CP_Font_DrawText("YES", area_center_x + 150, 400);
 
-			// if no
-			if (IsAreaClicked(area_center_x - 150, 400, 200, 200, click_x, click_y)) {
-				isquit = 0;
-			}
-		}		
+		// if yes
+		if (IsAreaClicked(area_center_x + 150, 400, 200, 200, click_x, click_y)) {
+			CP_Engine_Terminate();
+		}
+
+		// if no
+		if (IsAreaClicked(area_center_x - 150, 400, 200, 200, click_x, click_y)) {
+			isquit = 0;
+		}
 	}
 }
 
