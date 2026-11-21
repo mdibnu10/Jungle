@@ -243,7 +243,7 @@ void Game_Init(void)
 	timer.y = 50.0f;
 	timer.width = 200.0f;
 	timer.height = 70.0f;
-	timer.timeLeft = 60.0f;
+	timer.timeLeft = 5.0f;
 	//KillCount Values
 	killcount.y = 50.0f;
 	killcount.width = 200.0f;
@@ -441,7 +441,8 @@ void Game_Update(void)
 				{
 					if (IsSquareColliding2(dummy[i].x, dummy[i].y, dummy[i].width, dummy[i].height, melee.x, melee.y, melee.width, melee.height) && dummy[i].counter != 0 && Paused == 0 && GAMEOVER != 1)
 					{
-						dummy[i].counter--;
+						dummy[i].counter -= 3;
+						if (dummy[i].counter < 0) dummy[i].counter = 0;
 					}
 
 					if (GameMode == 2 && IsSquareColliding2(boss.x, boss.y, boss.width, boss.height, melee.x, melee.y, melee.width, melee.height))
@@ -858,13 +859,13 @@ void Game_Update(void)
 
 
 	// ======================================================================================================== //
-	//if (GameMode != 2)
-	//for (int i = 0; i < max_obs; i++) {
-	//	CP_Settings_Fill(red);
-	//	CP_Graphics_DrawRect(obstacle[i].x, obstacle[i].y, obstacle[i].width, obstacle[i].height);
-		// Activate used state
-		//obstacle[i].state = 1;
-	//}
+	// Actuvate use state for current map
+	if (GameMode != 2)
+	for (int i = 0; i < max_obs; i++) {
+		//CP_Settings_Fill(red);
+		//CP_Graphics_DrawRect(obstacle[i].x, obstacle[i].y, obstacle[i].width, obstacle[i].height);
+		obstacle[i].state = 1;
+	}
 	// Reset unused obstacle state
 	for (int i = max_obs; i < MAX_OBSTACLE; i++) {
 		obstacle[i].state = 0;
@@ -874,7 +875,7 @@ void Game_Update(void)
 	//---------------------------------------------------------
 	for (int i = 0; i < MAX_DUMMY; i++)
 	{
-		if (dummy[i].counter == 0 && dummy[i].dead == 0)
+		if (dummy[i].counter <= 0 && dummy[i].dead == 0)
 		{
 			if (dummy[i].state != DIE)          // runs once, on the frame it dies
 			{
@@ -892,17 +893,29 @@ void Game_Update(void)
 		if (GameMode == 2) {
 			continue;
 		}
-		if (dummy[i].dead == 1 && (GameMode == 0 || killcount.amount < 6)) {
-			dummy[i].dead = 0;
-			do {
-				dummy[i].x = random_range(100, 1500);
-				dummy[i].y = random_range(100, 600);
-				// Calculate the Euclidean distance using Pythagoras Theorem
-				VDP_dist = sqrtf(euclidean_distance(knight.x, knight.y, dummy[i].x, dummy[i].y));
-			} while (VDP_dist <= 250.0f);
-			dummy[i].counter = 10;
-			dummy[i].deathTimer = 2.0f;
-			dummy[i].state = IDLE;
+		if (killcount.amount >= 10)
+		{
+			killcount.amount = 10;
+			dummy[i].counter = 0;
+		}
+		else if (timer.timeLeft <= 0.0f)
+		{
+			dummy[i].counter = 0;
+		}
+		else
+		{
+			if (dummy[i].dead == 1 && (GameMode == 0 || GameMode == 1)) {
+				dummy[i].dead = 0;
+				do {
+					dummy[i].x = random_range(100, 1500);
+					dummy[i].y = random_range(100, 600);
+					// Calculate the Euclidean distance using Pythagoras Theorem
+					VDP_dist = sqrtf(euclidean_distance(knight.x, knight.y, dummy[i].x, dummy[i].y));
+				} while (VDP_dist <= 250.0f);
+				dummy[i].counter = 10;
+				dummy[i].deathTimer = 2.0f;
+				dummy[i].state = IDLE;
+			}
 		}
 	}
 	//If Pause is clicked, pause the game first and stop everything.
@@ -1358,14 +1371,25 @@ void Game_Update(void)
 	//}
 
 	// continue button to proceed to next level
-	if (IsAreaClicked(windowLength - 200, killcount.y, 250, killcount.height, CP_Input_GetMouseX(), CP_Input_GetMouseY()) && current_level < 2) {
-		current_level++;
-		CP_Engine_SetNextGameStateForced(Game_Init, Game_Update, Game_Exit);
+	if (current_level != 2)
+	{
+		if (IsAreaClicked(windowLength - 200, killcount.y, 250, killcount.height, CP_Input_GetMouseX(), CP_Input_GetMouseY())) {
+			current_level++;
+			CP_Engine_SetNextGameStateForced(Game_Init, Game_Update, Game_Exit);
+		}
 	}
-	if (IsAreaClicked(windowLength - 200, killcount.y, 250, killcount.height, CP_Input_GetMouseX(), CP_Input_GetMouseY()) && current_level == 2) {
-		current_level++;
-		GameMode = 2;
+	else {
+		if (IsAreaClicked(windowLength - 200, killcount.y, 250, killcount.height, CP_Input_GetMouseX(), CP_Input_GetMouseY())) {
+			current_level++;
+			GameMode = 2;
+			CP_Engine_SetNextGameStateForced(Game_Init, Game_Update, Game_Exit);
+		}
 	}
+
+	//if (IsAreaClicked(windowLength - 200, killcount.y, 250, killcount.height, CP_Input_GetMouseX(), CP_Input_GetMouseY()) && current_level == 2) {
+	//	current_level++;
+	//	GameMode = 2;
+	//}
 
 	//if (CP_Input_KeyDown(KEY_Q)) {
 	//	current_level = 0;
