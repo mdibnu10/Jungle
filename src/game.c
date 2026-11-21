@@ -392,20 +392,20 @@ void Game_Update(void)
 	}
 	//---------------------------------------------------------------------
 	//For testing purposes (hitboxes)
-	if (ClickedSlot == 1)
-	{
-		CP_Settings_Fill(green);
-		CP_Graphics_DrawRect(melee.x, melee.y, melee.width, melee.height);
-	}
-	CP_Settings_Fill(black);
-	CP_Graphics_DrawRect(knight.x, knight.y, knight.width, knight.height);
-	for (int i = 0; i < MAX_DUMMY; ++i)
-	{
-		if (dummy[i].dead != 1)
-		{
-			CP_Graphics_DrawRect(dummy[i].x, dummy[i].y, dummy[i].width, dummy[i].height);
-		}
-	}
+	//if (ClickedSlot == 1)
+	//{
+	//	CP_Settings_Fill(green);
+	//	CP_Graphics_DrawRect(melee.x, melee.y, melee.width, melee.height);
+	//}
+	//CP_Settings_Fill(black);
+	//CP_Graphics_DrawRect(knight.x, knight.y, knight.width, knight.height);
+	//for (int i = 0; i < MAX_DUMMY; ++i)
+	//{
+	//	if (dummy[i].dead != 1)
+	//	{
+	//		CP_Graphics_DrawRect(dummy[i].x, dummy[i].y, dummy[i].width, dummy[i].height);
+	//	}
+	//}
 	//---------------------------------------------------------------------
 	// decide the state (can't change state mid-attack)
 	if (knight.state != ATTACK && ClickedSlot == 1)
@@ -772,7 +772,7 @@ void Game_Update(void)
 			if (touching == 1 && boss.has_hit == 0)
 			{
 				boss.state = BOSS_ATTACK1;
-				HPBARHEALTH -= 10.0f;
+				HPBARHEALTH -= 30.0f;
 			}
 			else if (boss.has_hit == 1)
 			{
@@ -858,13 +858,13 @@ void Game_Update(void)
 
 
 	// ======================================================================================================== //
-	if (GameMode != 2)
-	for (int i = 0; i < max_obs; i++) {
-		CP_Settings_Fill(red);
-		CP_Graphics_DrawRect(obstacle[i].x, obstacle[i].y, obstacle[i].width, obstacle[i].height);
+	//if (GameMode != 2)
+	//for (int i = 0; i < max_obs; i++) {
+	//	CP_Settings_Fill(red);
+	//	CP_Graphics_DrawRect(obstacle[i].x, obstacle[i].y, obstacle[i].width, obstacle[i].height);
 		// Activate used state
-		obstacle[i].state = 1;
-	}
+		//obstacle[i].state = 1;
+	//}
 	// Reset unused obstacle state
 	for (int i = max_obs; i < MAX_OBSTACLE; i++) {
 		obstacle[i].state = 0;
