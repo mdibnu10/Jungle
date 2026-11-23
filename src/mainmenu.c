@@ -86,7 +86,7 @@ int current_level = 0;
 // randomize map for each level
 void randomize(void)
 {
-	for (int i = 0; i < LEVELS; i++)
+	for (int i = 0; i < 3; i++)
 		random_map[i] = rand() % MAPS_PER_LEVEL;
 }
 
