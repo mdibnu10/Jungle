@@ -85,6 +85,8 @@ int tut_showing = 1;
 
 char const* slotNum[] = {" ", "1", "2", "3" };
 
+int level_complete = 0;
+
 void Game_Init(void)
 {
 	GameMode = (current_level == LEVELS - 1) ? 2 : random_range(0, 1);
@@ -1246,6 +1248,7 @@ void Game_Update(void)
 			CP_Settings_TextSize(50.0f);
 			CP_Settings_TextAlignment(CP_TEXT_ALIGN_H_CENTER, CP_TEXT_ALIGN_V_MIDDLE);
 			CP_Font_DrawText("CONTINUE", windowLength - 200, killcount.y);
+			level_complete = 1;
 		}
 	}
 	else if (GameMode == 1) {
@@ -1269,6 +1272,7 @@ void Game_Update(void)
 			CP_Settings_TextSize(50.0f);
 			CP_Settings_TextAlignment(CP_TEXT_ALIGN_H_CENTER, CP_TEXT_ALIGN_V_MIDDLE);
 			CP_Font_DrawText("CONTINUE", windowLength - 200, killcount.y);
+			level_complete = 1;
 		}
 	}
 
@@ -1371,18 +1375,22 @@ void Game_Update(void)
 	//}
 
 	// continue button to proceed to next level
-	if (current_level != 2)
+	if (level_complete == 1)
 	{
-		if (IsAreaClicked(windowLength - 200, killcount.y, 250, killcount.height, CP_Input_GetMouseX(), CP_Input_GetMouseY())) {
-			current_level++;
-			CP_Engine_SetNextGameStateForced(Game_Init, Game_Update, Game_Exit);
+		if (current_level != 2)
+		{
+			if (IsAreaClicked(windowLength - 200, killcount.y, 250, killcount.height, CP_Input_GetMouseX(), CP_Input_GetMouseY())) {
+				current_level++;
+				CP_Engine_SetNextGameStateForced(Game_Init, Game_Update, Game_Exit);
+				level_complete = 0;
+			}
 		}
-	}
-	else {
-		if (IsAreaClicked(windowLength - 200, killcount.y, 250, killcount.height, CP_Input_GetMouseX(), CP_Input_GetMouseY())) {
-			current_level++;
-			GameMode = 2;
-			CP_Engine_SetNextGameStateForced(Game_Init, Game_Update, Game_Exit);
+		else {
+			if (IsAreaClicked(windowLength - 200, killcount.y, 250, killcount.height, CP_Input_GetMouseX(), CP_Input_GetMouseY())) {
+				current_level++;
+				GameMode = 2;
+				CP_Engine_SetNextGameStateForced(Game_Init, Game_Update, Game_Exit);
+			}
 		}
 	}
 
