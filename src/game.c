@@ -107,6 +107,7 @@ void Game_Init(void)
 	knight.height = 60;
 	knight.iFrame = 0;
 	knight.iFrameTimer = 0.0f;
+	knight.dead = 0;
 	melee.width = 100;
 	melee.height = 120;
 	melee.state = 0;
@@ -149,6 +150,7 @@ void Game_Init(void)
 	Anim_Init(&knight.idle, "Assets/Characters/Player/Knight_Idle.png", 120, 80, 0.12f, 1);
 	Anim_Init(&knight.run, "Assets/Characters/Player/Knight_Run.png", 120, 80, 0.12f, 1);
 	Anim_Init(&knight.attack, "Assets/Characters/Player/Knight_Attack.png", 120, 80, 0.10f, 0);
+	Anim_Init(&knight.die, "Assets/Characters/Player/Knight_Death.png", 120, 80, 0.10f, 0);
 	if (GameMode != 2)
 	{
 		for (int i = 0; i < MAX_DUMMY; i++)
@@ -353,7 +355,7 @@ void Game_Update(void)
 	}
 	//---------------------------------------------------------
 	// Player's Control
-	if (GAMEOVER != 1 && Paused == 0) {
+	if (GAMEOVER != 1 && Paused == 0 && knight.state != DIE) {
 		float move_x = 0, move_y = 0;
 		if (CP_Input_KeyDown(KEY_A))
 		{
@@ -410,7 +412,7 @@ void Game_Update(void)
 	//}
 	//---------------------------------------------------------------------
 	// decide the state (can't change state mid-attack)
-	if (knight.state != ATTACK && ClickedSlot == 1)
+	if (knight.state != ATTACK && ClickedSlot == 1 && knight.state != DIE)
 	{
 		if (CP_Input_MouseTriggered(MOUSE_BUTTON_LEFT) && Paused != 1)
 		{
@@ -491,6 +493,13 @@ void Game_Update(void)
 		}
 		Anim_Draw(&knight.attack, knight.x, knight.y - knight.height / 2.0f, draw_width, 120);
 		break;
+	case DIE:
+		if (Anim_Update(&knight.die, dt))
+		{
+			knight.dead = 1;
+		}
+		Anim_Draw(&knight.die, knight.x, knight.y - knight.height / 2.0f, draw_width, 120);
+		break;
 	}
 	draw_width = knight.is_right == 1 ? 110 : -110;
 	/*------------------------------------------------------------------------------*/
@@ -498,7 +507,7 @@ void Game_Update(void)
 	float mouseY = CP_Input_GetMouseY();
 
 	// when slot 2 is selected and used
-	if (knight.state != ATTACK && ClickedSlot == 2)
+	if (knight.state != ATTACK && ClickedSlot == 2 && knight.state != DIE)
 	{
 		if (CP_Input_MouseTriggered(MOUSE_BUTTON_LEFT) && Paused == 0 && !IsAreaClicked(50, 50, 50, 50, CP_Input_GetMouseX(), CP_Input_GetMouseY())) {
 			for (int i = 0; i < MAX_BULLETS; i++) {
@@ -768,10 +777,11 @@ void Game_Update(void)
 			knight.x, knight.y, knight.width, knight.height);
 		
 		if (boss.state != BOSS_ATTACK1 &&
-			boss.state != BOSS_ATTACK2)
+			boss.state != BOSS_ATTACK2 && boss.state != BOSS_ATTACK3)
 		{
 			if (boss.attackCooldown <= 0) boss.has_hit = 0;
 			if (boss.attack2Cooldown > 0.0f) boss.attack2Cooldown -= dt;
+			if (boss.attack3Cooldown > 0.0f) boss.attack3Cooldown -= dt;
 			if (touching == 1 && boss.has_hit == 0)
 			{
 				boss.state = BOSS_ATTACK1;
@@ -787,6 +797,16 @@ void Game_Update(void)
 				boss.slash = 0;
 				Anim_Reset(&boss.attack);
 			}
+			else if (VDP_dist > 250 && VDP_dist <= 700 && boss.attack3Cooldown <= 0.0f)
+			{
+				boss.state = BOSS_ATTACK3;
+				boss.jumpStartX = boss.x;      // 1000
+				boss.jumpStartY = boss.y;
+				boss.jumpTargetX = knight.x;    // 400
+				boss.jumpTargetY = knight.y;
+				boss.jumpHit = 0;
+				Anim_Reset(&boss.attack3);
+			}
 			else if (VDP_dist <= 600 && touching != 1 && boss.has_hit == 0)
 			{
 				boss.state = BOSS_CHASE;
@@ -795,11 +815,19 @@ void Game_Update(void)
 			}
 		}
 	}
-
+    
+	if (GameMode == 2 && boss.state == BOSS_ATTACK3 && boss.attack3.frame == 5 && boss.jumpHit == 0)
+	{
+		boss.jumpHit = 1;
+		if (VDP_dist < 100) {
+			HPBARHEALTH -= 10.0f;
+			if (HPBARHEALTH < 0) HPBARHEALTH = 0;
+		}
+	}
 
 	if (GameMode == 2 && boss.slash == 1)
 	{
-		boss.slash = 2;   // fired, don't spawn again
+		boss.slash = 2; // means fired
 		for (int s = 0; s < MAX_BULLETS; s++)
 		{
 			if (slashes[s].state == 0)
@@ -944,7 +972,6 @@ void Game_Update(void)
 			CP_Sound_Play(player_damage);
 			if (HPBARHEALTH < 5.0f && lives == 1) {
 				CP_Sound_Play(player_death);
-				knight.state = DIE;
 			}
 			if (HPBARHEALTH < 0) {
 				HPBARHEALTH = 0;
@@ -1133,16 +1160,23 @@ void Game_Update(void)
 	}
 	else
 	{
-		if (lives == 1)
+		knight.state = DIE;
+		if (knight.dead == 1)
 		{
-			GAMEOVER = 1;
-		}
-		else
-		{
-			lives--;
-			knight.x = windowLength / 2.0f;
-			knight.y = windowHeight / 2.0f;
-			HPBARHEALTH = knight.width;
+			if (lives == 1)
+			{
+				GAMEOVER = 1;
+			}
+			else
+			{
+				lives--;
+				knight.x = windowLength / 2.0f;
+				knight.y = windowHeight / 2.0f;
+				HPBARHEALTH = knight.width;
+				knight.dead = 0;
+				knight.state = IDLE;
+				Anim_Reset(&knight.die);
+			}
 		}
 	}
 

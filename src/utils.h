@@ -33,6 +33,7 @@ typedef enum {
 	BOSS_CHASE,
 	BOSS_ATTACK1,
 	BOSS_ATTACK2,
+	BOSS_ATTACK3,
 	BOSS_DEAD
 } BossState;
 
@@ -40,6 +41,8 @@ typedef struct Boss {
 	float x, y;
 	float width, height;      // hitbox
 	float draw_w, draw_h;     // sprite size
+	float jumpStartX, jumpStartY, jumpTargetX, jumpTargetY;
+	int jumpHit;
 	float speed;
 	float hp, maxHp;
 	int   has_hit;
@@ -48,8 +51,9 @@ typedef struct Boss {
 	float stateTimer;
 	float attackCooldown;
 	float attack2Cooldown;
+	float attack3Cooldown;
 	int slash;
-	Animation attack, attack2, idle, run;
+	Animation attack, attack2, attack3, idle, run;
 } Boss;
 
 void Boss_Init(Boss* b);
@@ -72,6 +76,7 @@ typedef struct Player
 	float width;
 	float height;
 	int is_right;
+	int dead;
 	int iFrame;
 	float iFrameTimer;
 	PlayerState state;

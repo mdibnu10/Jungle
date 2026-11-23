@@ -183,10 +183,12 @@ void Boss_Init(Boss* b)
 	b->stateTimer = 1.0f;
 	b->attackCooldown = 2.0f;
 	b->attack2Cooldown = 4.0f;
+	b->attack2Cooldown = 0.0f;
 	Anim_Init(&b->idle, "Assets/Characters/Boss/Boss_Idle.png", 180, 180, 0.12f, 1);
 	Anim_Init(&b->run, "Assets/Characters/Boss/Boss_Run.png", 180, 180, 0.12f, 1);
 	Anim_Init(&b->attack, "Assets/Characters/Boss/Boss_Attack.png", 180, 180, 0.05f, 0);
 	Anim_Init(&b->attack2, "Assets/Characters/Boss/Boss_Attack2.png", 180, 180, 0.05f, 0);
+	Anim_Init(&b->attack3, "Assets/Characters/Boss/Boss_Attack3.png", 180, 180, 0.10f, 0);
 }
 
 void Boss_Update(Boss* b, float dt, float knightX, float knightY)
@@ -213,15 +215,40 @@ void Boss_Update(Boss* b, float dt, float knightX, float knightY)
 		
 		break;
 	case BOSS_ATTACK2:
+		if (b->slash == 0 && b->attack2.frame >= 3)
 		b->slash = 1;
-		if(Anim_Update(&b->attack, dt))
+		if(Anim_Update(&b->attack2, dt))
 		{
-		Anim_Reset(&b->attack);
+		Anim_Reset(&b->attack2);
 		b->state = BOSS_IDLE;
 		b->attack2Cooldown = 4.0f;
 		}
 		break;
-		
+	case BOSS_ATTACK3:
+	{
+		int f = b->attack3.frame;
+
+		if (f >= F_AIRFRAME && f <= S_AIRFRAME)
+		{
+			// progress 0..1 across the mid-air frames
+			float t = ((f - F_AIRFRAME) + b->attack3.timer / b->attack3.frame_time) / 2;
+			b->x = CP_Math_LerpFloat(b->jumpStartX, b->jumpTargetX, t);
+			b->y = CP_Math_LerpFloat(b->jumpStartY, b->jumpTargetY, t);
+		}
+		else if (f > S_AIRFRAME)
+		{
+			b->x = b->jumpTargetX;   // lock onto landing spot
+			b->y = b->jumpTargetY;
+		}
+		if (Anim_Update(&b->attack3, dt))
+		{
+			Anim_Reset(&b->attack3);
+			b->state = BOSS_IDLE;
+			b->attack3Cooldown = 6.0f;
+		}
+		break;
+	}
+
 	default: break;
 	}
 }
@@ -243,7 +270,8 @@ void Boss_Draw(Boss* b)
 		break;
 	case BOSS_ATTACK2:
 		Anim_Draw(&b->attack2, b->x, b->y, w, b->draw_h);
-		
+	case BOSS_ATTACK3:
+		Anim_Draw(&b->attack3, b->x, b->y, w, b->draw_h);
 		break;
 	default: break;
 	}

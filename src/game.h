@@ -17,6 +17,8 @@
 #define MAX_DUMMY 5
 #define MAX_BULLETS 5
 #define MAX_BULLET_DISTANCE 280.0f
+#define F_AIRFRAME 4
+#define S_AIRFRAME 5
 
 void Game_Init(void);
 
