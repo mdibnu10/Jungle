@@ -786,6 +786,7 @@ void Game_Update(void)
 			{
 				boss.state = BOSS_ATTACK1;
 				HPBARHEALTH -= 30.0f;
+				if (HPBARHEALTH < 0) HPBARHEALTH = 0;
 			}
 			else if (boss.has_hit == 1)
 			{
@@ -795,7 +796,7 @@ void Game_Update(void)
 			{
 				boss.state = BOSS_ATTACK2;
 				boss.slash = 0;
-				Anim_Reset(&boss.attack);
+				Anim_Reset(&boss.attack2);
 			}
 			else if (VDP_dist > 250 && VDP_dist <= 700 && boss.attack3Cooldown <= 0.0f)
 			{
@@ -834,8 +835,8 @@ void Game_Update(void)
 			{
 				slashes[s].x = boss.x;
 				slashes[s].y = boss.y;
-				slashes[s].speed_x = NVDP_X * 350.0f;
-				slashes[s].speed_y = NVDP_Y * 350.0f;
+				slashes[s].speed_x = NVDP_X * 500.0f;
+				slashes[s].speed_y = NVDP_Y * 500.0f;
 				slashes[s].angle = CP_Math_Degrees(atan2f(NVDP_Y, NVDP_X));
 				slashes[s].size = 40.0f;
 				slashes[s].state = 1;

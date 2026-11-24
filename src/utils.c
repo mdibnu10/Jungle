@@ -186,8 +186,8 @@ void Boss_Init(Boss* b)
 	b->attack2Cooldown = 0.0f;
 	Anim_Init(&b->idle, "Assets/Characters/Boss/Boss_Idle.png", 180, 180, 0.12f, 1);
 	Anim_Init(&b->run, "Assets/Characters/Boss/Boss_Run.png", 180, 180, 0.12f, 1);
-	Anim_Init(&b->attack, "Assets/Characters/Boss/Boss_Attack.png", 180, 180, 0.05f, 0);
-	Anim_Init(&b->attack2, "Assets/Characters/Boss/Boss_Attack2.png", 180, 180, 0.05f, 0);
+	Anim_Init(&b->attack, "Assets/Characters/Boss/Boss_Attack.png", 180, 180, 0.10f, 0);
+	Anim_Init(&b->attack2, "Assets/Characters/Boss/Boss_Attack2.png", 180, 180, 0.10f, 0);
 	Anim_Init(&b->attack3, "Assets/Characters/Boss/Boss_Attack3.png", 180, 180, 0.10f, 0);
 }
 
