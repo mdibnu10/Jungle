@@ -16,10 +16,10 @@
 #include "utils.h"
 
 CP_Font globalfont;
-CP_Image bg, digipen;
+static CP_Image bg, digipen;
 CP_Sound music;
 
-float timer = 0.0f;
+static float timer = 0.0f;
 int isShow = 1;
 
 int isquit;

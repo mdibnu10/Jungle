@@ -35,6 +35,7 @@ typedef enum {
 	BOSS_ATTACK2,
 	BOSS_ATTACK3,
 	BOSS_ATTACK4,
+	BOSS_ATTACK5,
 	BOSS_DEAD
 } BossState;
 
@@ -52,18 +53,20 @@ typedef struct Boss {
 	int is_right;
 	int beam_hit;
 	BossState state;
+	float spinTimer;
 	float stateTimer;
 	float attackCooldown;
 	float attack2Cooldown;
 	float attack3Cooldown;
 	float attack4Cooldown;
+	float attack5Cooldown;
 	float beam_angle;
 	float ball_x;
 	float ball_y;
 	float beam_x;
 	float beam_y;
 	int slash;
-	Animation attack, attack2, attack3, attack4, beam, idle, run;
+	Animation attack, attack2, attack3, attack4, attack5, beam, idle, run;
 	CP_Image beamdir;
 } Boss;
 

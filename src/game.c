@@ -799,12 +799,13 @@ void Game_Update(void)
 			knight.x, knight.y, knight.width, knight.height);
 		
 		if (boss.state != BOSS_ATTACK1 && boss.state != BOSS_ATTACK2 &&
-			boss.state != BOSS_ATTACK3 && boss.state != BOSS_ATTACK4)
+			boss.state != BOSS_ATTACK3 && boss.state != BOSS_ATTACK4 && boss.state != BOSS_ATTACK5)
 		{
 			if (boss.attackCooldown <= 0) boss.has_hit = 0;
 			if (boss.attack2Cooldown > 0.0f) boss.attack2Cooldown -= dt;
 			if (boss.attack3Cooldown > 0.0f) boss.attack3Cooldown -= dt;
 			if (boss.attack4Cooldown > 0.0f) boss.attack4Cooldown -= dt;
+			if (boss.attack5Cooldown > 0.0f) boss.attack5Cooldown -= dt;
 			if (touching == 1 && boss.has_hit == 0)
 			{
 				boss.state = BOSS_ATTACK1;
@@ -814,6 +815,12 @@ void Game_Update(void)
 			else if (boss.has_hit == 1)
 			{
 				boss.attackCooldown -= dt;
+			}
+			else if (VDP_dist > 100 && boss.attack5Cooldown <= 0.0f)
+			{
+				boss.state = BOSS_ATTACK5;
+				Anim_Reset(&boss.attack5);
+				boss.spinTimer = 4.0f;
 			}
 			else if (VDP_dist > 100 && boss.attack2Cooldown <= 0.0f)
 			{
@@ -843,7 +850,21 @@ void Game_Update(void)
 			}
 		}
 	}
-
+	if (boss.state == BOSS_ATTACK5)
+	{
+		if (VDP_dist >= 100)
+		{
+			boss.x += (NVDP_X * boss.speed) * dt;
+			boss.y += (NVDP_Y * boss.speed) * dt;
+		}
+		else if (knight.iFrame == 0)
+		{
+			knight.iFrame = 1;
+			knight.iFrameTimer = 0.5f;
+			HPBARHEALTH -= 5.0f;
+			if (HPBARHEALTH < 0) HPBARHEALTH = 0;
+		}
+	}
 	if (BeamHitsKnight(&boss, knight.x, knight.y, knight.width, knight.height)
 		&& !boss.beam_hit)
 	{

@@ -190,12 +190,14 @@ void Boss_Init(Boss* b)
 	b->has_hit = 0;
 	b->beam_hit = 0;
 	b->is_right = 1;
+	b->spinTimer = 4.0f;
 	b->state = BOSS_IDLE;
 	b->stateTimer = 1.0f;
 	b->attackCooldown = 2.0f;
 	b->attack2Cooldown = 4.0f;
 	b->attack3Cooldown = 0.0f;
 	b->attack4Cooldown = 5.0f;
+	b->attack5Cooldown = 5.0f;
 	b->beamdir = CP_Image_Load("Assets/Characters/Boss/finaldirections.png");
 	Anim_Init(&b->idle, "Assets/Characters/Boss/Boss_Idle.png", 180, 180, 0.12f, 1);
 	Anim_Init(&b->run, "Assets/Characters/Boss/Boss_Run.png", 180, 180, 0.12f, 1);
@@ -203,6 +205,7 @@ void Boss_Init(Boss* b)
 	Anim_Init(&b->attack2, "Assets/Characters/Boss/Boss_Attack2.png", 180, 180, 0.10f, 0);
 	Anim_Init(&b->attack3, "Assets/Characters/Boss/Boss_Attack3.png", 180, 180, 0.10f, 0);
 	Anim_Init(&b->attack4, "Assets/Characters/Boss/Boss_Attack4.png", 180, 180, 0.10f, 0);
+	Anim_Init(&b->attack5, "Assets/Characters/Boss/Boss_Attack5.png", 180, 180, 0.05f, 1);
 	Anim_Init(&b->beam, "Assets/Characters/Boss/Boss_Beam.png", 96, 96, 0.15f, 0);
 }
 
@@ -276,7 +279,15 @@ void Boss_Update(Boss* b, float dt, float knightX, float knightY)
 			
 		}
 		break;
-
+	case BOSS_ATTACK5:
+		Anim_Update(&b->attack5, dt);
+		b->spinTimer -= dt;
+		if (b->spinTimer <= 0)
+		{
+			b->attack5Cooldown = 5.0f;
+			b->state = BOSS_CHASE;
+		}
+		break;
 	default: break;
 	}
 }
@@ -329,6 +340,9 @@ void Boss_Draw(Boss* b)
 			if ((b->beam.frame) < 4) Anim_DrawBeam(&b->beam, b->ball_x, b->ball_y, 180, 180, b->beam_angle);
 			else Anim_DrawBeam(&b->beam, b->beam_x, b->beam_y, 960, 180, b->beam_angle);
 		}
+		break;
+	case BOSS_ATTACK5:
+		Anim_Draw(&b->attack5, b->x, b->y, 360, 360);
 		break;
 
 	default: break;
