@@ -171,24 +171,29 @@ void Anim_Free(Animation* anim)
 
 void Boss_Init(Boss* b)
 {
-	b->x = 1200.0f;  b->y = 500.0f;
+	b->x = 800.0f;  b->y = 200.0f;
 	b->width = 150.0f;  b->height = 120.0f;
 	b->draw_w = 180.0f; b->draw_h = 180.0f;
 	b->speed = 180.0f;
 	b->maxHp = 100.0f;
 	b->hp = b->maxHp;
+	b->beamfired = 0;
 	b->has_hit = 0;
 	b->is_right = 1;
 	b->state = BOSS_IDLE;
 	b->stateTimer = 1.0f;
 	b->attackCooldown = 2.0f;
 	b->attack2Cooldown = 4.0f;
-	b->attack2Cooldown = 0.0f;
+	b->attack3Cooldown = 0.0f;
+	b->attack4Cooldown = 5.0f;
+	b->beamdir = CP_Image_Load("Assets/Characters/Boss/finaldirections.png");
 	Anim_Init(&b->idle, "Assets/Characters/Boss/Boss_Idle.png", 180, 180, 0.12f, 1);
 	Anim_Init(&b->run, "Assets/Characters/Boss/Boss_Run.png", 180, 180, 0.12f, 1);
 	Anim_Init(&b->attack, "Assets/Characters/Boss/Boss_Attack.png", 180, 180, 0.10f, 0);
 	Anim_Init(&b->attack2, "Assets/Characters/Boss/Boss_Attack2.png", 180, 180, 0.10f, 0);
 	Anim_Init(&b->attack3, "Assets/Characters/Boss/Boss_Attack3.png", 180, 180, 0.10f, 0);
+	Anim_Init(&b->attack4, "Assets/Characters/Boss/Boss_Attack4.png", 180, 180, 0.10f, 0);
+	Anim_Init(&b->beam, "Assets/Characters/Boss/Boss_Beam.png", 96, 96, 0.10f, 0);
 }
 
 void Boss_Update(Boss* b, float dt, float knightX, float knightY)
@@ -212,7 +217,6 @@ void Boss_Update(Boss* b, float dt, float knightX, float knightY)
 			b->attackCooldown = 2.0f;
 			b->has_hit = 1;
 		}
-		
 		break;
 	case BOSS_ATTACK2:
 		if (b->slash == 0 && b->attack2.frame >= 3)
@@ -248,6 +252,19 @@ void Boss_Update(Boss* b, float dt, float knightX, float knightY)
 		}
 		break;
 	}
+	case BOSS_ATTACK4:
+		if (Anim_Update(&b->attack4, dt))
+		{
+			b->state = IDLE;
+			b->attack4Cooldown = 5.0f;
+			Anim_Reset(&b->attack4);
+		}
+		if (Anim_Update(&b->beam, dt))
+		{
+			b->state = IDLE;
+			Anim_Reset(&b->beam);
+		}
+		break;
 
 	default: break;
 	}
@@ -264,17 +281,51 @@ void Boss_Draw(Boss* b)
 	case BOSS_CHASE:
 		Anim_Draw(&b->run, b->x, b->y, w, b->draw_h);
 		break; 
-	case BOSS_ATTACK1: 
-		
+	case BOSS_ATTACK1: 	
 		Anim_Draw(&b->attack, b->x, b->y, w, b->draw_h);
 		break;
 	case BOSS_ATTACK2:
 		Anim_Draw(&b->attack2, b->x, b->y, w, b->draw_h);
+		break;
 	case BOSS_ATTACK3:
 		Anim_Draw(&b->attack3, b->x, b->y, w, b->draw_h);
 		break;
+	case BOSS_ATTACK4:
+		if (b->attack4.frame != 7)
+		{
+			Anim_Draw(&b->attack4, b->x, b->y, w, b->draw_h);
+		}
+		else if (b->facingdir == LEFT || b->facingdir == RIGHT)
+		{
+			Anim_Draw(&b->attack4, b->x, b->y, w, b->draw_h);
+		}
+		else
+		{
+			CP_Image_DrawSubImage(b->beamdir, b->x, b->y, 360, 360,
+				b->facingdir * 180, 0,
+				(b->facingdir + 1) * 180, 180, 255);
+		}
+		
+		// print the first few frames of beam in small size but the rest is long
+		if ((b->beam.frame) < 4) Anim_Draw(&b->beam, b->x, b->y, 130, 130);
+		else Anim_Draw(&b->beam, b->x + 400, b->y, 960, 130);
+		break;
+
 	default: break;
 	}
+}
+
+void change_dir(Boss* b, float angle)
+{
+	angle = fmodf(angle + 360.0f, 360.0f);
+	if (angle >= 340 || angle <= 20) b->facingdir = RIGHT;
+	else if (angle >= 20 && angle <= 70) b->facingdir = FOUR_QUARTER;
+	else if (angle >= 70 && angle <= 110) b->facingdir = DOWN;
+	else if (angle >= 110 && angle <= 160) b->facingdir = THIRD_QUARTER;
+	else if (angle >= 160 && angle <= 200) b->facingdir = LEFT;
+	else if (angle >= 200 && angle <= 250) b->facingdir = SEC_QUARTER;
+	else if (angle >= 250 && angle <= 290) b->facingdir = UP;
+	else b->facingdir = FIRST_QUARTER;
 }
 
 void Boss_TakeDamage(Boss* b, float dmg)

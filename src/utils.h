@@ -34,6 +34,7 @@ typedef enum {
 	BOSS_ATTACK1,
 	BOSS_ATTACK2,
 	BOSS_ATTACK3,
+	BOSS_ATTACK4,
 	BOSS_DEAD
 } BossState;
 
@@ -43,17 +44,21 @@ typedef struct Boss {
 	float draw_w, draw_h;     // sprite size
 	float jumpStartX, jumpStartY, jumpTargetX, jumpTargetY;
 	int jumpHit;
+	int beamfired;
+	FacingDir facingdir;
 	float speed;
 	float hp, maxHp;
-	int   has_hit;
-	int   is_right;
+	int has_hit;
+	int is_right;
 	BossState state;
 	float stateTimer;
 	float attackCooldown;
 	float attack2Cooldown;
 	float attack3Cooldown;
+	float attack4Cooldown;
 	int slash;
-	Animation attack, attack2, attack3, idle, run;
+	Animation attack, attack2, attack3, attack4, beam, idle, run;
+	CP_Image beamdir;
 } Boss;
 
 void Boss_Init(Boss* b);
@@ -102,6 +107,7 @@ void Anim_Init(Animation* a, const char* path, int fw, int fh, float frame_time,
 void Anim_Reset(Animation* a);
 int  Anim_Update(Animation* a, float dt);
 void Anim_Draw(const Animation* a, float x, float y, float w, float h);
+void change_dir(Boss* b, float angle);
 //=======
 float findQ(float value, float min, float max);
 

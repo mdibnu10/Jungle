@@ -80,6 +80,7 @@ CP_Image bow, sword, potion;
 CP_Color black, white, red, yellow, green, orange, blue, grey;
 
 Boss boss;
+float boss2player_angle;
 float tut_timer = 0.0f;
 int tut_showing = 1;
 
@@ -726,7 +727,7 @@ void Game_Update(void)
 				{
 					dummy[i].dead = 1;
 				}
-
+				if(current_map->char_moves[0] != exception[1])
 				Anim_Draw(&dummy[i].die, dummy[i].x,
 					dummy[i].y - dummy[i].height / 2,
 					draw_width, dummy_height);
@@ -772,16 +773,20 @@ void Game_Update(void)
 		// Normalize the Vector
 		NVDP_X = VDP_X / VDP_dist;
 		NVDP_Y = VDP_Y / VDP_dist;
+		boss2player_angle = CP_Math_Degrees(atan2f(NVDP_Y, NVDP_X));
+		change_dir(&boss, boss2player_angle);
 
+		
 		int touching = IsSquareColliding2(boss.x, boss.y, boss.width, boss.height,
 			knight.x, knight.y, knight.width, knight.height);
 		
-		if (boss.state != BOSS_ATTACK1 &&
-			boss.state != BOSS_ATTACK2 && boss.state != BOSS_ATTACK3)
+		if (boss.state != BOSS_ATTACK1 && boss.state != BOSS_ATTACK2 &&
+			boss.state != BOSS_ATTACK3 && boss.state != BOSS_ATTACK4)
 		{
 			if (boss.attackCooldown <= 0) boss.has_hit = 0;
 			if (boss.attack2Cooldown > 0.0f) boss.attack2Cooldown -= dt;
 			if (boss.attack3Cooldown > 0.0f) boss.attack3Cooldown -= dt;
+			if (boss.attack4Cooldown > 0.0f) boss.attack4Cooldown -= dt;
 			if (touching == 1 && boss.has_hit == 0)
 			{
 				boss.state = BOSS_ATTACK1;
@@ -797,6 +802,10 @@ void Game_Update(void)
 				boss.state = BOSS_ATTACK2;
 				boss.slash = 0;
 				Anim_Reset(&boss.attack2);
+			}
+			else if (VDP_dist > 200 && boss.attack4Cooldown <= 0.0f)
+			{
+				boss.state = BOSS_ATTACK4;
 			}
 			else if (VDP_dist > 250 && VDP_dist <= 700 && boss.attack3Cooldown <= 0.0f)
 			{
