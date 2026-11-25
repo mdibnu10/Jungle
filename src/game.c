@@ -564,6 +564,18 @@ void Game_Update(void)
 					}
 				}
 			}
+			
+			if (boss.state != DIE) {
+				if (bullets[i].x <= boss.x + boss.width / 2.0f &&
+					bullets[i].x >= boss.x - boss.width / 2.0f &&
+					bullets[i].y <= boss.y + boss.height / 2.0f &&
+					bullets[i].y >= boss.y - boss.height / 2.0f)
+				{
+					Boss_TakeDamage(&boss, 0.5);
+					bullets[i].state = 0;
+				}
+			}
+			
 			for (int y = 0; y < max_obs; y++) {
 				if (bullets[i].x <= obstacle[y].x + obstacle[y].width / 2.0f &&
 					bullets[i].x >= obstacle[y].x - obstacle[y].width / 2.0f &&
@@ -886,21 +898,15 @@ void Game_Update(void)
 			continue;
 		}
 
-		// placeholder blue slash, swap for a sprite later
 		CP_Settings_RectMode(CP_POSITION_CENTER);
 		CP_Settings_Fill(CP_Color_Create(80, 160, 255, 220));
 		//CP_Graphics_DrawRectAdvanced(slashes[s].x, slashes[s].y, slashes[s].size * 1.5f, 12.0f, slashes[s].angle, 6.0f);
 		CP_Image_DrawAdvanced(slashimg, slashes[s].x, slashes[s].y, 128, 128, 255, slashes[s].angle);
 	}
 
-
-
-
-
-
 	// ======================================================================================================== //
 	// Actuvate use state for current map
-	if (GameMode != 2)
+	
 	for (int i = 0; i < max_obs; i++) {
 		//CP_Settings_Fill(red);
 		//CP_Graphics_DrawRect(obstacle[i].x, obstacle[i].y, obstacle[i].width, obstacle[i].height);
