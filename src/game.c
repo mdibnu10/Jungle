@@ -786,9 +786,15 @@ void Game_Update(void)
 		NVDP_X = VDP_X / VDP_dist;
 		NVDP_Y = VDP_Y / VDP_dist;
 		boss2player_angle = CP_Math_Degrees(atan2f(NVDP_Y, NVDP_X));
+		// ensure angle is based on 360 instead of going negative
+		boss2player_angle = fmodf(boss2player_angle + 360.0f, 360.0f);
 		change_dir(&boss, boss2player_angle);
 
-		
+		int playerinrange = boss2player_angle >= 355 && boss2player_angle <= 360 || boss2player_angle >= 0 && boss2player_angle <= 5 ||
+			boss2player_angle >= 40 && boss2player_angle <= 50 || boss2player_angle >= 85 && boss2player_angle <= 95 ||
+			boss2player_angle >= 130 && boss2player_angle <= 140 || boss2player_angle >= 175 && boss2player_angle <= 185 ||
+			boss2player_angle >= 220 && boss2player_angle <= 230 || boss2player_angle >= 265 && boss2player_angle <= 275 ||
+			boss2player_angle >= 310 && boss2player_angle <= 320;
 		int touching = IsSquareColliding2(boss.x, boss.y, boss.width, boss.height,
 			knight.x, knight.y, knight.width, knight.height);
 		
@@ -815,7 +821,7 @@ void Game_Update(void)
 				boss.slash = 0;
 				Anim_Reset(&boss.attack2);
 			}
-			else if (VDP_dist > 200 && boss.attack4Cooldown <= 0.0f)
+			else if (VDP_dist > 200 && boss.attack4Cooldown <= 0.0f && playerinrange)
 			{
 				boss.state = BOSS_ATTACK4;
 			}
@@ -836,6 +842,15 @@ void Game_Update(void)
 				boss.y += (NVDP_Y * boss.speed) * dt;
 			}
 		}
+	}
+
+	if (BeamHitsKnight(&boss, knight.x, knight.y, knight.width, knight.height)
+		&& !boss.beam_hit)
+	{
+		boss.beam_hit = 1;
+		HPBARHEALTH -= 10.0f;
+		if (HPBARHEALTH < 0) HPBARHEALTH = 0;
+
 	}
     
 	if (GameMode == 2 && boss.state == BOSS_ATTACK3 && boss.attack3.frame == 5 && boss.jumpHit == 0)

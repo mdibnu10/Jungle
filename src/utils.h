@@ -44,18 +44,24 @@ typedef struct Boss {
 	float draw_w, draw_h;     // sprite size
 	float jumpStartX, jumpStartY, jumpTargetX, jumpTargetY;
 	int jumpHit;
-	int beamfired;
+	float hold_frame;
 	FacingDir facingdir;
 	float speed;
 	float hp, maxHp;
 	int has_hit;
 	int is_right;
+	int beam_hit;
 	BossState state;
 	float stateTimer;
 	float attackCooldown;
 	float attack2Cooldown;
 	float attack3Cooldown;
 	float attack4Cooldown;
+	float beam_angle;
+	float ball_x;
+	float ball_y;
+	float beam_x;
+	float beam_y;
 	int slash;
 	Animation attack, attack2, attack3, attack4, beam, idle, run;
 	CP_Image beamdir;
@@ -107,6 +113,7 @@ void Anim_Init(Animation* a, const char* path, int fw, int fh, float frame_time,
 void Anim_Reset(Animation* a);
 int  Anim_Update(Animation* a, float dt);
 void Anim_Draw(const Animation* a, float x, float y, float w, float h);
+int BeamHitsKnight(const Boss* b, float kx, float ky, float kw, float kh);
 void change_dir(Boss* b, float angle);
 //=======
 float findQ(float value, float min, float max);

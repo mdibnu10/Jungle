@@ -75,6 +75,15 @@ void Anim_Draw(const Animation* a, float x, float y, float w, float h)
 		(float)(a->frame * a->img_w), 0,
 		(float)((a->frame + 1) * a->img_w), (float)a->img_h, 255);
 }
+
+void Anim_DrawBeam(const Animation* a, float x, float y, float w, float h, float angle)
+{
+	CP_Settings_ImageMode(CP_POSITION_CENTER);
+	CP_Image_DrawSubImageAdvanced(a->img, x, y, w, h,
+	(float)(a->frame * a->img_w), 0,
+	(float)((a->frame + 1) * a->img_w), (float)a->img_h, 255, angle);
+	// print the first few frames of beam in small size but the rest is long		
+}
 //=======
 float findQ(float value, float min, float max) {
 	if (value < min) return min;
@@ -171,14 +180,15 @@ void Anim_Free(Animation* anim)
 
 void Boss_Init(Boss* b)
 {
-	b->x = 800.0f;  b->y = 200.0f;
+	b->x = 450.0f;  b->y = 100.0f;
 	b->width = 150.0f;  b->height = 120.0f;
 	b->draw_w = 180.0f; b->draw_h = 180.0f;
 	b->speed = 180.0f;
 	b->maxHp = 100.0f;
 	b->hp = b->maxHp;
-	b->beamfired = 0;
+	b->hold_frame = 3.0f;
 	b->has_hit = 0;
+	b->beam_hit = 0;
 	b->is_right = 1;
 	b->state = BOSS_IDLE;
 	b->stateTimer = 1.0f;
@@ -193,7 +203,7 @@ void Boss_Init(Boss* b)
 	Anim_Init(&b->attack2, "Assets/Characters/Boss/Boss_Attack2.png", 180, 180, 0.10f, 0);
 	Anim_Init(&b->attack3, "Assets/Characters/Boss/Boss_Attack3.png", 180, 180, 0.10f, 0);
 	Anim_Init(&b->attack4, "Assets/Characters/Boss/Boss_Attack4.png", 180, 180, 0.10f, 0);
-	Anim_Init(&b->beam, "Assets/Characters/Boss/Boss_Beam.png", 96, 96, 0.10f, 0);
+	Anim_Init(&b->beam, "Assets/Characters/Boss/Boss_Beam.png", 96, 96, 0.15f, 0);
 }
 
 void Boss_Update(Boss* b, float dt, float knightX, float knightY)
@@ -234,14 +244,14 @@ void Boss_Update(Boss* b, float dt, float knightX, float knightY)
 
 		if (f >= F_AIRFRAME && f <= S_AIRFRAME)
 		{
-			// progress 0..1 across the mid-air frames
+			// progress 0-1 across the mid-air frames
 			float t = ((f - F_AIRFRAME) + b->attack3.timer / b->attack3.frame_time) / 2;
 			b->x = CP_Math_LerpFloat(b->jumpStartX, b->jumpTargetX, t);
 			b->y = CP_Math_LerpFloat(b->jumpStartY, b->jumpTargetY, t);
 		}
 		else if (f > S_AIRFRAME)
 		{
-			b->x = b->jumpTargetX;   // lock onto landing spot
+			b->x = b->jumpTargetX;
 			b->y = b->jumpTargetY;
 		}
 		if (Anim_Update(&b->attack3, dt))
@@ -253,16 +263,17 @@ void Boss_Update(Boss* b, float dt, float knightX, float knightY)
 		break;
 	}
 	case BOSS_ATTACK4:
-		if (Anim_Update(&b->attack4, dt))
-		{
-			b->state = IDLE;
-			b->attack4Cooldown = 5.0f;
-			Anim_Reset(&b->attack4);
-		}
+		Anim_Update(&b->attack4, dt);
+		b->hold_frame -= 0;
 		if (Anim_Update(&b->beam, dt))
 		{
 			b->state = IDLE;
+			b->attack4Cooldown = 5.0f;
+			b->hold_frame = 3.0f;
+			Anim_Reset(&b->attack4);
 			Anim_Reset(&b->beam);
+			b->beam_hit = 0;
+			
 		}
 		break;
 
@@ -291,24 +302,33 @@ void Boss_Draw(Boss* b)
 		Anim_Draw(&b->attack3, b->x, b->y, w, b->draw_h);
 		break;
 	case BOSS_ATTACK4:
+		// do not print the last frame first 
 		if (b->attack4.frame != 7)
 		{
 			Anim_Draw(&b->attack4, b->x, b->y, w, b->draw_h);
 		}
 		else if (b->facingdir == LEFT || b->facingdir == RIGHT)
 		{
-			Anim_Draw(&b->attack4, b->x, b->y, w, b->draw_h);
+			if (b->hold_frame > 0) Anim_Draw(&b->attack4, b->x, b->y, w, b->draw_h);
 		}
 		else
 		{
-			CP_Image_DrawSubImage(b->beamdir, b->x, b->y, 360, 360,
-				b->facingdir * 180, 0,
-				(b->facingdir + 1) * 180, 180, 255);
+			if (b->hold_frame > 0)
+			{
+				
+				CP_Image_DrawSubImage(b->beamdir, b->x, b->y, 360, 360,
+					b->facingdir * 180, 0,
+					(b->facingdir + 1) * 180, 180, 255);
+			}
 		}
 		
-		// print the first few frames of beam in small size but the rest is long
-		if ((b->beam.frame) < 4) Anim_Draw(&b->beam, b->x, b->y, 130, 130);
-		else Anim_Draw(&b->beam, b->x + 400, b->y, 960, 130);
+		// start firing only when in position
+		if (b->attack4.frame > 4)
+		{
+			// print the first few frames of beam in small size but the rest is long
+			if ((b->beam.frame) < 4) Anim_DrawBeam(&b->beam, b->ball_x, b->ball_y, 180, 180, b->beam_angle);
+			else Anim_DrawBeam(&b->beam, b->beam_x, b->beam_y, 960, 180, b->beam_angle);
+		}
 		break;
 
 	default: break;
@@ -317,7 +337,6 @@ void Boss_Draw(Boss* b)
 
 void change_dir(Boss* b, float angle)
 {
-	angle = fmodf(angle + 360.0f, 360.0f);
 	if (angle >= 340 || angle <= 20) b->facingdir = RIGHT;
 	else if (angle >= 20 && angle <= 70) b->facingdir = FOUR_QUARTER;
 	else if (angle >= 70 && angle <= 110) b->facingdir = DOWN;
@@ -326,8 +345,95 @@ void change_dir(Boss* b, float angle)
 	else if (angle >= 200 && angle <= 250) b->facingdir = SEC_QUARTER;
 	else if (angle >= 250 && angle <= 290) b->facingdir = UP;
 	else b->facingdir = FIRST_QUARTER;
-}
 
+	switch (b->facingdir)
+	{
+	case UP:
+		b->beam_angle = 270;
+		b->ball_x = b->x;
+		b->beam_x = b->x;
+		b->ball_y = b->y - 150;
+		b->beam_y = b->y - 550;
+		break;
+	case DOWN:
+		b->beam_angle = 90;
+		b->ball_x = b->x;
+		b->beam_x = b->x;
+		b->ball_y = b->y + 150;
+		b->beam_y = b->y + 550;
+		break;
+	case LEFT:
+		b->beam_angle = 180;
+		b->ball_x = b->x - 200;
+		b->beam_x = b->x - 600;
+		b->ball_y = b->y;
+		b->beam_y = b->y;
+		break;
+	case RIGHT:
+		b->beam_angle = 0;
+		b->ball_x = b->x + 200;
+		b->beam_x = b->x + 600;
+		b->ball_y = b->y;
+		b->beam_y = b->y;
+		break;
+	case FIRST_QUARTER:
+		b->beam_angle = 315;
+		b->ball_x = b->x + 130;
+		b->beam_x = b->x + 400;
+		b->ball_y = b->y - 120;
+		b->beam_y = b->y - 420;
+		break;
+	case SEC_QUARTER:
+		b->beam_angle = 225;
+		b->ball_x = b->x - 130;
+		b->beam_x = b->x - 400;
+		b->ball_y = b->y - 120;
+		b->beam_y = b->y - 420;
+		break;
+	case THIRD_QUARTER:
+		b->beam_angle = 135;
+		b->ball_x = b->x - 130;
+		b->beam_x = b->x - 400;
+		b->ball_y = b->y + 120;
+		b->beam_y = b->y + 420;
+		break;
+	case FOUR_QUARTER:
+		b->beam_angle = 45;
+		b->ball_x = b->x + 130;
+		b->beam_x = b->x + 400;
+		b->ball_y = b->y + 120;
+		b->beam_y = b->y + 420;
+		break;
+	}
+}
+int BeamHitsKnight(const Boss* boss, float kx, float ky,
+	float kw, float kh)
+{
+	// only the long, dangerous part of the beam can hurt
+	if (boss->state != BOSS_ATTACK4 || boss->beam.frame < 4) return 0;
+
+	float beam_length = 750.0f;
+	float beam_thickness = 80.0f;   //
+
+	// convert degrees to radians
+	float angle_radians = boss->beam_angle * PI / 180.0f;
+	float cos_angle = cosf(angle_radians);
+	float sin_angle = sinf(angle_radians);
+
+	// how far the knight is from the beam's centre, in normal screen space
+	float offset_x = kx - boss->beam_x;
+	float offset_y = ky - boss->beam_y;
+
+	// rotate the knight's position backwards by the beam's angle,
+	// so the beam becomes flat and the knight moves to match
+	float flat_knight_x = offset_x * cos_angle + offset_y * sin_angle;
+	float flat_knight_y = -offset_x * sin_angle + offset_y * cos_angle;
+
+	// the flat beam now sits at (0, 0), so a normal AABB check works
+	return IsSquareColliding2(0, 0, beam_length, beam_thickness,
+		flat_knight_x, flat_knight_y,
+		kw, kh);
+}
 void Boss_TakeDamage(Boss* b, float dmg)
 {
 	if (b->state == BOSS_DEAD) return;

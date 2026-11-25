@@ -19,6 +19,7 @@
 #define MAX_BULLET_DISTANCE 280.0f
 #define F_AIRFRAME 4
 #define S_AIRFRAME 5
+#define PI 3.14159265f
 
 void Game_Init(void);
 
