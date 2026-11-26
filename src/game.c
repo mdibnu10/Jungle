@@ -87,6 +87,11 @@ int tut_showing = 1;
 char const* slotNum[] = {" ", "1", "2", "3" };
 
 int level_complete = 0;
+//Used for potion
+int usedState = 0;
+float PotionCD = 0.0f;
+float ArrowUsed = 0;
+float ArrowCD = 3.0f;
 
 void Game_Init(void)
 {
@@ -113,6 +118,12 @@ void Game_Init(void)
 	melee.height = 120;
 	melee.state = 0;
 	melee.timer = 0.0f;
+
+	//Reset when next game state
+	usedState = 0;
+	PotionCD = 0.0f;
+	ArrowUsed = 0;
+	ArrowCD = 3.0f;
 
 	for (int i = 0; i < MAX_DUMMY; ++i)
 	{
@@ -248,7 +259,7 @@ void Game_Init(void)
 	timer.y = 50.0f;
 	timer.width = 200.0f;
 	timer.height = 70.0f;
-	timer.timeLeft = 5.0f;
+	timer.timeLeft = 60.0f;
 	//KillCount Values
 	killcount.y = 50.0f;
 	killcount.width = 200.0f;
@@ -446,7 +457,7 @@ void Game_Update(void)
 				{
 					if (IsSquareColliding2(dummy[i].x, dummy[i].y, dummy[i].width, dummy[i].height, melee.x, melee.y, melee.width, melee.height) && dummy[i].counter != 0 && Paused == 0 && GAMEOVER != 1)
 					{
-						dummy[i].counter -= 3;
+						dummy[i].counter -= 2;
 						if (dummy[i].counter < 0) dummy[i].counter = 0;
 					}
 
@@ -512,7 +523,7 @@ void Game_Update(void)
 	{
 		if (CP_Input_MouseTriggered(MOUSE_BUTTON_LEFT) && Paused == 0 && !IsAreaClicked(50, 50, 50, 50, CP_Input_GetMouseX(), CP_Input_GetMouseY())) {
 			for (int i = 0; i < MAX_BULLETS; i++) {
-				if (bullets[i].state == 0) {
+				if (bullets[i].state == 0 && ArrowUsed < 5) {
 					// Find the Vector between Player and Mouse
 					Vec_X = mouseX - knight.x;
 					Vec_Y = mouseY - knight.y;
@@ -533,6 +544,7 @@ void Game_Update(void)
 					bullets[i].angle = CP_Math_Degrees(atan2f(Vec_Y, Vec_X));
 					bullets[i].size = 15.0f; // Size
 					bullets[i].state = 1; // Active State
+					ArrowUsed += 1;
 					CP_Sound_Play(bowarrow);
 					break;
 				}
@@ -585,6 +597,16 @@ void Game_Update(void)
 					bullets[i].state = 0;
 				}
 			}
+		}
+	}
+
+	if (ArrowUsed >= 5)
+	{
+		ArrowCD -= dt;
+		if (ArrowCD <= 0)
+		{
+			ArrowCD = 3.0f;
+			ArrowUsed = 0;
 		}
 	}
 	//
@@ -1267,8 +1289,23 @@ void Game_Update(void)
 	
 	CP_Image_Draw(sword, windowLength / 2.0f + ((-1) * 120), windowHeight - 65.0f, 48.0f, 100.0f, 255); // drawing sword in 1st inventory slot
 	CP_Image_Draw(bow, windowLength / 2, windowHeight - 65.0f, 60.0f, 91.0f, 255); // drawing bow in 2nd inventory slot
+	//bow cd
+	//--------------
+	if (ArrowUsed >= 5)
+	{
+		CP_Settings_Fill(CP_Color_Create(80, 80, 80, 150));
+		CP_Graphics_DrawRect(windowLength / 2.0f + ((2 - 2) * 120), windowHeight - 65, 100, 100);
+	}
+	//--------------
 	CP_Image_Draw(potion, windowLength / 2.0f + ((1) * 120), windowHeight - 65.0f, 48.0f, 78.0f, 255); // drawing health potion in 3rd inventory slot
-
+	//potion cd
+	//--------------
+	if (usedState == 1)
+	{
+		CP_Settings_Fill(CP_Color_Create(80, 80, 80, 150));
+		CP_Graphics_DrawRect(windowLength / 2.0f + ((3 - 2) * 120), windowHeight - 65, 100, 100);
+	}
+	//--------------
 	if (current_map->char_moves[0] != exception[1])
 	{
 		CP_Settings_ImageMode(CP_POSITION_CORNER);
@@ -1296,13 +1333,25 @@ void Game_Update(void)
 	}
 
 	// when health potion is selected and used
-	if (CP_Input_MouseTriggered(MOUSE_BUTTON_LEFT) && Paused == 0 && ClickedSlot == 3) {
+	if (CP_Input_MouseTriggered(MOUSE_BUTTON_LEFT) && Paused == 0 && ClickedSlot == 3 && usedState != 1) {
 		if (HPBARHEALTH < knight.width) { // if player is not full health -> no effect when player is at full hp
 			CP_Sound_Play(hp);
-			HPBARHEALTH += 10; // regains 10 hp
+			HPBARHEALTH += 35; // regains 10 hp
+			usedState = 1;
+			PotionCD = 20.0f;
 			if (HPBARHEALTH > knight.width) {
 				HPBARHEALTH = knight.width;
 			}
+		}
+	}
+
+	if (usedState == 1)
+	{
+		PotionCD -= dt;
+		if (PotionCD <= 0)
+		{
+			usedState = 0;
+			PotionCD = 0;
 		}
 	}
 
