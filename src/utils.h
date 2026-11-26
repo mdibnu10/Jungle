@@ -33,6 +33,9 @@ typedef enum {
 	BOSS_CHASE,
 	BOSS_ATTACK1,
 	BOSS_ATTACK2,
+	BOSS_ATTACK3,
+	BOSS_ATTACK4,
+	BOSS_ATTACK5,
 	BOSS_DEAD
 } BossState;
 
@@ -40,16 +43,31 @@ typedef struct Boss {
 	float x, y;
 	float width, height;      // hitbox
 	float draw_w, draw_h;     // sprite size
+	float jumpStartX, jumpStartY, jumpTargetX, jumpTargetY;
+	int jumpHit;
+	float hold_frame;
+	FacingDir facingdir;
 	float speed;
 	float hp, maxHp;
-	int   has_hit;
-	int   is_right;
+	int has_hit;
+	int is_right;
+	int beam_hit;
 	BossState state;
+	float spinTimer;
 	float stateTimer;
 	float attackCooldown;
 	float attack2Cooldown;
+	float attack3Cooldown;
+	float attack4Cooldown;
+	float attack5Cooldown;
+	float beam_angle;
+	float ball_x;
+	float ball_y;
+	float beam_x;
+	float beam_y;
 	int slash;
-	Animation attack, attack2, idle, run;
+	Animation attack, attack2, attack3, attack4, attack5, beam, idle, run;
+	CP_Image beamdir;
 } Boss;
 
 void Boss_Init(Boss* b);
@@ -72,6 +90,7 @@ typedef struct Player
 	float width;
 	float height;
 	int is_right;
+	int dead;
 	int iFrame;
 	float iFrameTimer;
 	PlayerState state;
@@ -97,6 +116,8 @@ void Anim_Init(Animation* a, const char* path, int fw, int fh, float frame_time,
 void Anim_Reset(Animation* a);
 int  Anim_Update(Animation* a, float dt);
 void Anim_Draw(const Animation* a, float x, float y, float w, float h);
+int BeamHitsKnight(const Boss* b, float kx, float ky, float kw, float kh);
+void change_dir(Boss* b, float angle);
 //=======
 float findQ(float value, float min, float max);
 
