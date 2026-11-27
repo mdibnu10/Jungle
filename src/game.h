@@ -17,6 +17,9 @@
 #define MAX_DUMMY 5
 #define MAX_BULLETS 5
 #define MAX_BULLET_DISTANCE 280.0f
+#define F_AIRFRAME 4
+#define S_AIRFRAME 5
+#define PI 3.14159265f
 
 void Game_Init(void);
 
@@ -75,6 +78,18 @@ typedef enum
 	DAMAGE_BOOST,
 	BOOST_COUNT
 } BoostType;
+
+typedef enum
+{
+	UP = 1,
+	DOWN = 4,
+	LEFT = 6,
+	RIGHT = 7,
+	FIRST_QUARTER = 2,
+	SEC_QUARTER = 0,
+	THIRD_QUARTER = 5,
+	FOUR_QUARTER = 3
+} FacingDir;
 
 typedef struct {
 	float y;          // vertical position of the box

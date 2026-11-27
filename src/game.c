@@ -80,10 +80,18 @@ CP_Image bow, sword, potion;
 CP_Color black, white, red, yellow, green, orange, blue, grey;
 
 Boss boss;
+float boss2player_angle;
 float tut_timer = 0.0f;
 int tut_showing = 1;
 
 char const* slotNum[] = {" ", "1", "2", "3" };
+
+int level_complete = 0;
+//Used for potion
+int usedState = 0;
+float PotionCD = 0.0f;
+float ArrowUsed = 0;
+float ArrowCD = 3.0f;
 
 void Game_Init(void)
 {
@@ -105,10 +113,17 @@ void Game_Init(void)
 	knight.height = 60;
 	knight.iFrame = 0;
 	knight.iFrameTimer = 0.0f;
+	knight.dead = 0;
 	melee.width = 100;
 	melee.height = 120;
 	melee.state = 0;
 	melee.timer = 0.0f;
+
+	//Reset when next game state
+	usedState = 0;
+	PotionCD = 0.0f;
+	ArrowUsed = 0;
+	ArrowCD = 3.0f;
 
 	for (int i = 0; i < MAX_DUMMY; ++i)
 	{
@@ -147,6 +162,7 @@ void Game_Init(void)
 	Anim_Init(&knight.idle, "Assets/Characters/Player/Knight_Idle.png", 120, 80, 0.12f, 1);
 	Anim_Init(&knight.run, "Assets/Characters/Player/Knight_Run.png", 120, 80, 0.12f, 1);
 	Anim_Init(&knight.attack, "Assets/Characters/Player/Knight_Attack.png", 120, 80, 0.10f, 0);
+	Anim_Init(&knight.die, "Assets/Characters/Player/Knight_Death.png", 120, 80, 0.10f, 0);
 	if (GameMode != 2)
 	{
 		for (int i = 0; i < MAX_DUMMY; i++)
@@ -351,7 +367,7 @@ void Game_Update(void)
 	}
 	//---------------------------------------------------------
 	// Player's Control
-	if (GAMEOVER != 1 && Paused == 0) {
+	if (GAMEOVER != 1 && Paused == 0 && knight.state != DIE) {
 		float move_x = 0, move_y = 0;
 		if (CP_Input_KeyDown(KEY_A))
 		{
@@ -392,23 +408,23 @@ void Game_Update(void)
 	}
 	//---------------------------------------------------------------------
 	//For testing purposes (hitboxes)
-	if (ClickedSlot == 1)
-	{
-		CP_Settings_Fill(green);
-		CP_Graphics_DrawRect(melee.x, melee.y, melee.width, melee.height);
-	}
-	CP_Settings_Fill(black);
-	CP_Graphics_DrawRect(knight.x, knight.y, knight.width, knight.height);
-	for (int i = 0; i < MAX_DUMMY; ++i)
-	{
-		if (dummy[i].dead != 1)
-		{
-			CP_Graphics_DrawRect(dummy[i].x, dummy[i].y, dummy[i].width, dummy[i].height);
-		}
-	}
+	//if (ClickedSlot == 1)
+	//{
+	//	CP_Settings_Fill(green);
+	//	CP_Graphics_DrawRect(melee.x, melee.y, melee.width, melee.height);
+	//}
+	//CP_Settings_Fill(black);
+	//CP_Graphics_DrawRect(knight.x, knight.y, knight.width, knight.height);
+	//for (int i = 0; i < MAX_DUMMY; ++i)
+	//{
+	//	if (dummy[i].dead != 1)
+	//	{
+	//		CP_Graphics_DrawRect(dummy[i].x, dummy[i].y, dummy[i].width, dummy[i].height);
+	//	}
+	//}
 	//---------------------------------------------------------------------
 	// decide the state (can't change state mid-attack)
-	if (knight.state != ATTACK && ClickedSlot == 1)
+	if (knight.state != ATTACK && ClickedSlot == 1 && knight.state != DIE)
 	{
 		if (CP_Input_MouseTriggered(MOUSE_BUTTON_LEFT) && Paused != 1)
 		{
@@ -441,7 +457,8 @@ void Game_Update(void)
 				{
 					if (IsSquareColliding2(dummy[i].x, dummy[i].y, dummy[i].width, dummy[i].height, melee.x, melee.y, melee.width, melee.height) && dummy[i].counter != 0 && Paused == 0 && GAMEOVER != 1)
 					{
-						dummy[i].counter--;
+						dummy[i].counter -= 2;
+						if (dummy[i].counter < 0) dummy[i].counter = 0;
 					}
 
 					if (GameMode == 2 && IsSquareColliding2(boss.x, boss.y, boss.width, boss.height, melee.x, melee.y, melee.width, melee.height))
@@ -488,6 +505,13 @@ void Game_Update(void)
 		}
 		Anim_Draw(&knight.attack, knight.x, knight.y - knight.height / 2.0f, draw_width, 120);
 		break;
+	case DIE:
+		if (Anim_Update(&knight.die, dt))
+		{
+			knight.dead = 1;
+		}
+		Anim_Draw(&knight.die, knight.x, knight.y - knight.height / 2.0f, draw_width, 120);
+		break;
 	}
 	draw_width = knight.is_right == 1 ? 110 : -110;
 	/*------------------------------------------------------------------------------*/
@@ -495,11 +519,11 @@ void Game_Update(void)
 	float mouseY = CP_Input_GetMouseY();
 
 	// when slot 2 is selected and used
-	if (knight.state != ATTACK && ClickedSlot == 2)
+	if (knight.state != ATTACK && ClickedSlot == 2 && knight.state != DIE)
 	{
 		if (CP_Input_MouseTriggered(MOUSE_BUTTON_LEFT) && Paused == 0 && !IsAreaClicked(50, 50, 50, 50, CP_Input_GetMouseX(), CP_Input_GetMouseY())) {
 			for (int i = 0; i < MAX_BULLETS; i++) {
-				if (bullets[i].state == 0) {
+				if (bullets[i].state == 0 && ArrowUsed < 5) {
 					// Find the Vector between Player and Mouse
 					Vec_X = mouseX - knight.x;
 					Vec_Y = mouseY - knight.y;
@@ -520,6 +544,7 @@ void Game_Update(void)
 					bullets[i].angle = CP_Math_Degrees(atan2f(Vec_Y, Vec_X));
 					bullets[i].size = 15.0f; // Size
 					bullets[i].state = 1; // Active State
+					ArrowUsed += 1;
 					CP_Sound_Play(bowarrow);
 					break;
 				}
@@ -551,6 +576,18 @@ void Game_Update(void)
 					}
 				}
 			}
+			
+			if (boss.state != DIE) {
+				if (bullets[i].x <= boss.x + boss.width / 2.0f &&
+					bullets[i].x >= boss.x - boss.width / 2.0f &&
+					bullets[i].y <= boss.y + boss.height / 2.0f &&
+					bullets[i].y >= boss.y - boss.height / 2.0f)
+				{
+					Boss_TakeDamage(&boss, 0.5);
+					bullets[i].state = 0;
+				}
+			}
+			
 			for (int y = 0; y < max_obs; y++) {
 				if (bullets[i].x <= obstacle[y].x + obstacle[y].width / 2.0f &&
 					bullets[i].x >= obstacle[y].x - obstacle[y].width / 2.0f &&
@@ -560,6 +597,16 @@ void Game_Update(void)
 					bullets[i].state = 0;
 				}
 			}
+		}
+	}
+
+	if (ArrowUsed >= 5)
+	{
+		ArrowCD -= dt;
+		if (ArrowCD <= 0)
+		{
+			ArrowCD = 3.0f;
+			ArrowUsed = 0;
 		}
 	}
 	//
@@ -714,7 +761,7 @@ void Game_Update(void)
 				{
 					dummy[i].dead = 1;
 				}
-
+				if(current_map->char_moves[0] != exception[1])
 				Anim_Draw(&dummy[i].die, dummy[i].x,
 					dummy[i].y - dummy[i].height / 2,
 					draw_width, dummy_height);
@@ -760,29 +807,62 @@ void Game_Update(void)
 		// Normalize the Vector
 		NVDP_X = VDP_X / VDP_dist;
 		NVDP_Y = VDP_Y / VDP_dist;
+		boss2player_angle = CP_Math_Degrees(atan2f(NVDP_Y, NVDP_X));
+		// ensure angle is based on 360 instead of going negative
+		boss2player_angle = fmodf(boss2player_angle + 360.0f, 360.0f);
+		change_dir(&boss, boss2player_angle);
 
+		int playerinrange = boss2player_angle >= 355 && boss2player_angle <= 360 || boss2player_angle >= 0 && boss2player_angle <= 5 ||
+			boss2player_angle >= 40 && boss2player_angle <= 50 || boss2player_angle >= 85 && boss2player_angle <= 95 ||
+			boss2player_angle >= 130 && boss2player_angle <= 140 || boss2player_angle >= 175 && boss2player_angle <= 185 ||
+			boss2player_angle >= 220 && boss2player_angle <= 230 || boss2player_angle >= 265 && boss2player_angle <= 275 ||
+			boss2player_angle >= 310 && boss2player_angle <= 320;
 		int touching = IsSquareColliding2(boss.x, boss.y, boss.width, boss.height,
 			knight.x, knight.y, knight.width, knight.height);
 		
-		if (boss.state != BOSS_ATTACK1 &&
-			boss.state != BOSS_ATTACK2)
+		if (boss.state != BOSS_ATTACK1 && boss.state != BOSS_ATTACK2 &&
+			boss.state != BOSS_ATTACK3 && boss.state != BOSS_ATTACK4 && boss.state != BOSS_ATTACK5)
 		{
 			if (boss.attackCooldown <= 0) boss.has_hit = 0;
 			if (boss.attack2Cooldown > 0.0f) boss.attack2Cooldown -= dt;
+			if (boss.attack3Cooldown > 0.0f) boss.attack3Cooldown -= dt;
+			if (boss.attack4Cooldown > 0.0f) boss.attack4Cooldown -= dt;
+			if (boss.attack5Cooldown > 0.0f) boss.attack5Cooldown -= dt;
 			if (touching == 1 && boss.has_hit == 0)
 			{
 				boss.state = BOSS_ATTACK1;
-				HPBARHEALTH -= 10.0f;
+				HPBARHEALTH -= 30.0f;
+				if (HPBARHEALTH < 0) HPBARHEALTH = 0;
 			}
 			else if (boss.has_hit == 1)
 			{
 				boss.attackCooldown -= dt;
 			}
+			else if (VDP_dist > 100 && boss.attack5Cooldown <= 0.0f)
+			{
+				boss.state = BOSS_ATTACK5;
+				Anim_Reset(&boss.attack5);
+				boss.spinTimer = 4.0f;
+			}
 			else if (VDP_dist > 100 && boss.attack2Cooldown <= 0.0f)
 			{
 				boss.state = BOSS_ATTACK2;
 				boss.slash = 0;
-				Anim_Reset(&boss.attack);
+				Anim_Reset(&boss.attack2);
+			}
+			else if (VDP_dist > 200 && boss.attack4Cooldown <= 0.0f && playerinrange)
+			{
+				boss.state = BOSS_ATTACK4;
+			}
+			else if (VDP_dist > 250 && VDP_dist <= 700 && boss.attack3Cooldown <= 0.0f)
+			{
+				boss.state = BOSS_ATTACK3;
+				boss.jumpStartX = boss.x;      // 1000
+				boss.jumpStartY = boss.y;
+				boss.jumpTargetX = knight.x;    // 400
+				boss.jumpTargetY = knight.y;
+				boss.jumpHit = 0;
+				Anim_Reset(&boss.attack3);
 			}
 			else if (VDP_dist <= 600 && touching != 1 && boss.has_hit == 0)
 			{
@@ -792,19 +872,50 @@ void Game_Update(void)
 			}
 		}
 	}
+	if (boss.state == BOSS_ATTACK5)
+	{
+		if (VDP_dist >= 100)
+		{
+			boss.x += (NVDP_X * boss.speed) * dt;
+			boss.y += (NVDP_Y * boss.speed) * dt;
+		}
+		else if (knight.iFrame == 0)
+		{
+			knight.iFrame = 1;
+			knight.iFrameTimer = 0.5f;
+			HPBARHEALTH -= 5.0f;
+			if (HPBARHEALTH < 0) HPBARHEALTH = 0;
+		}
+	}
+	if (BeamHitsKnight(&boss, knight.x, knight.y, knight.width, knight.height)
+		&& !boss.beam_hit)
+	{
+		boss.beam_hit = 1;
+		HPBARHEALTH -= 10.0f;
+		if (HPBARHEALTH < 0) HPBARHEALTH = 0;
 
+	}
+    
+	if (GameMode == 2 && boss.state == BOSS_ATTACK3 && boss.attack3.frame == 5 && boss.jumpHit == 0)
+	{
+		boss.jumpHit = 1;
+		if (VDP_dist < 100) {
+			HPBARHEALTH -= 10.0f;
+			if (HPBARHEALTH < 0) HPBARHEALTH = 0;
+		}
+	}
 
 	if (GameMode == 2 && boss.slash == 1)
 	{
-		boss.slash = 2;   // fired, don't spawn again
+		boss.slash = 2; // means fired
 		for (int s = 0; s < MAX_BULLETS; s++)
 		{
 			if (slashes[s].state == 0)
 			{
 				slashes[s].x = boss.x;
 				slashes[s].y = boss.y;
-				slashes[s].speed_x = NVDP_X * 350.0f;
-				slashes[s].speed_y = NVDP_Y * 350.0f;
+				slashes[s].speed_x = NVDP_X * 500.0f;
+				slashes[s].speed_y = NVDP_Y * 500.0f;
 				slashes[s].angle = CP_Math_Degrees(atan2f(NVDP_Y, NVDP_X));
 				slashes[s].size = 40.0f;
 				slashes[s].state = 1;
@@ -845,24 +956,18 @@ void Game_Update(void)
 			continue;
 		}
 
-		// placeholder blue slash, swap for a sprite later
 		CP_Settings_RectMode(CP_POSITION_CENTER);
 		CP_Settings_Fill(CP_Color_Create(80, 160, 255, 220));
 		//CP_Graphics_DrawRectAdvanced(slashes[s].x, slashes[s].y, slashes[s].size * 1.5f, 12.0f, slashes[s].angle, 6.0f);
 		CP_Image_DrawAdvanced(slashimg, slashes[s].x, slashes[s].y, 128, 128, 255, slashes[s].angle);
 	}
 
-
-
-
-
-
 	// ======================================================================================================== //
-	if (GameMode != 2)
+	// Actuvate use state for current map
+	
 	for (int i = 0; i < max_obs; i++) {
-		CP_Settings_Fill(red);
-		CP_Graphics_DrawRect(obstacle[i].x, obstacle[i].y, obstacle[i].width, obstacle[i].height);
-		// Activate used state
+		//CP_Settings_Fill(red);
+		//CP_Graphics_DrawRect(obstacle[i].x, obstacle[i].y, obstacle[i].width, obstacle[i].height);
 		obstacle[i].state = 1;
 	}
 	// Reset unused obstacle state
@@ -874,7 +979,7 @@ void Game_Update(void)
 	//---------------------------------------------------------
 	for (int i = 0; i < MAX_DUMMY; i++)
 	{
-		if (dummy[i].counter == 0 && dummy[i].dead == 0)
+		if (dummy[i].counter <= 0 && dummy[i].dead == 0)
 		{
 			if (dummy[i].state != DIE)          // runs once, on the frame it dies
 			{
@@ -892,17 +997,29 @@ void Game_Update(void)
 		if (GameMode == 2) {
 			continue;
 		}
-		if (dummy[i].dead == 1 && (GameMode == 0 || killcount.amount < 6)) {
-			dummy[i].dead = 0;
-			do {
-				dummy[i].x = random_range(100, 1500);
-				dummy[i].y = random_range(100, 600);
-				// Calculate the Euclidean distance using Pythagoras Theorem
-				VDP_dist = sqrtf(euclidean_distance(knight.x, knight.y, dummy[i].x, dummy[i].y));
-			} while (VDP_dist <= 250.0f);
-			dummy[i].counter = 10;
-			dummy[i].deathTimer = 2.0f;
-			dummy[i].state = IDLE;
+		if (killcount.amount >= 10)
+		{
+			killcount.amount = 10;
+			dummy[i].counter = 0;
+		}
+		else if (timer.timeLeft <= 0.0f)
+		{
+			dummy[i].counter = 0;
+		}
+		else
+		{
+			if (dummy[i].dead == 1 && (GameMode == 0 || GameMode == 1)) {
+				dummy[i].dead = 0;
+				do {
+					dummy[i].x = random_range(100, 1500);
+					dummy[i].y = random_range(100, 600);
+					// Calculate the Euclidean distance using Pythagoras Theorem
+					VDP_dist = sqrtf(euclidean_distance(knight.x, knight.y, dummy[i].x, dummy[i].y));
+				} while (VDP_dist <= 250.0f);
+				dummy[i].counter = 10;
+				dummy[i].deathTimer = 2.0f;
+				dummy[i].state = IDLE;
+			}
 		}
 	}
 	//If Pause is clicked, pause the game first and stop everything.
@@ -929,7 +1046,6 @@ void Game_Update(void)
 			CP_Sound_Play(player_damage);
 			if (HPBARHEALTH < 5.0f && lives == 1) {
 				CP_Sound_Play(player_death);
-				knight.state = DIE;
 			}
 			if (HPBARHEALTH < 0) {
 				HPBARHEALTH = 0;
@@ -1118,16 +1234,23 @@ void Game_Update(void)
 	}
 	else
 	{
-		if (lives == 1)
+		knight.state = DIE;
+		if (knight.dead == 1)
 		{
-			GAMEOVER = 1;
-		}
-		else
-		{
-			lives--;
-			knight.x = windowLength / 2.0f;
-			knight.y = windowHeight / 2.0f;
-			HPBARHEALTH = knight.width;
+			if (lives == 1)
+			{
+				GAMEOVER = 1;
+			}
+			else
+			{
+				lives--;
+				knight.x = windowLength / 2.0f;
+				knight.y = windowHeight / 2.0f;
+				HPBARHEALTH = knight.width;
+				knight.dead = 0;
+				knight.state = IDLE;
+				Anim_Reset(&knight.die);
+			}
 		}
 	}
 
@@ -1166,8 +1289,23 @@ void Game_Update(void)
 	
 	CP_Image_Draw(sword, windowLength / 2.0f + ((-1) * 120), windowHeight - 65.0f, 48.0f, 100.0f, 255); // drawing sword in 1st inventory slot
 	CP_Image_Draw(bow, windowLength / 2, windowHeight - 65.0f, 60.0f, 91.0f, 255); // drawing bow in 2nd inventory slot
+	//bow cd
+	//--------------
+	if (ArrowUsed >= 5)
+	{
+		CP_Settings_Fill(CP_Color_Create(80, 80, 80, 150));
+		CP_Graphics_DrawRect(windowLength / 2.0f + ((2 - 2) * 120), windowHeight - 65, 100, 100);
+	}
+	//--------------
 	CP_Image_Draw(potion, windowLength / 2.0f + ((1) * 120), windowHeight - 65.0f, 48.0f, 78.0f, 255); // drawing health potion in 3rd inventory slot
-
+	//potion cd
+	//--------------
+	if (usedState == 1)
+	{
+		CP_Settings_Fill(CP_Color_Create(80, 80, 80, 150));
+		CP_Graphics_DrawRect(windowLength / 2.0f + ((3 - 2) * 120), windowHeight - 65, 100, 100);
+	}
+	//--------------
 	if (current_map->char_moves[0] != exception[1])
 	{
 		CP_Settings_ImageMode(CP_POSITION_CORNER);
@@ -1195,13 +1333,25 @@ void Game_Update(void)
 	}
 
 	// when health potion is selected and used
-	if (CP_Input_MouseTriggered(MOUSE_BUTTON_LEFT) && Paused == 0 && ClickedSlot == 3) {
+	if (CP_Input_MouseTriggered(MOUSE_BUTTON_LEFT) && Paused == 0 && ClickedSlot == 3 && usedState != 1) {
 		if (HPBARHEALTH < knight.width) { // if player is not full health -> no effect when player is at full hp
 			CP_Sound_Play(hp);
-			HPBARHEALTH += 10; // regains 10 hp
+			HPBARHEALTH += 35; // regains 10 hp
+			usedState = 1;
+			PotionCD = 20.0f;
 			if (HPBARHEALTH > knight.width) {
 				HPBARHEALTH = knight.width;
 			}
+		}
+	}
+
+	if (usedState == 1)
+	{
+		PotionCD -= dt;
+		if (PotionCD <= 0)
+		{
+			usedState = 0;
+			PotionCD = 0;
 		}
 	}
 
@@ -1233,6 +1383,7 @@ void Game_Update(void)
 			CP_Settings_TextSize(50.0f);
 			CP_Settings_TextAlignment(CP_TEXT_ALIGN_H_CENTER, CP_TEXT_ALIGN_V_MIDDLE);
 			CP_Font_DrawText("CONTINUE", windowLength - 200, killcount.y);
+			level_complete = 1;
 		}
 	}
 	else if (GameMode == 1) {
@@ -1256,6 +1407,7 @@ void Game_Update(void)
 			CP_Settings_TextSize(50.0f);
 			CP_Settings_TextAlignment(CP_TEXT_ALIGN_H_CENTER, CP_TEXT_ALIGN_V_MIDDLE);
 			CP_Font_DrawText("CONTINUE", windowLength - 200, killcount.y);
+			level_complete = 1;
 		}
 	}
 
@@ -1358,14 +1510,29 @@ void Game_Update(void)
 	//}
 
 	// continue button to proceed to next level
-	if (IsAreaClicked(windowLength - 200, killcount.y, 250, killcount.height, CP_Input_GetMouseX(), CP_Input_GetMouseY()) && current_level < 2) {
-		current_level++;
-		CP_Engine_SetNextGameStateForced(Game_Init, Game_Update, Game_Exit);
+	if (level_complete == 1)
+	{
+		if (current_level != 2)
+		{
+			if (IsAreaClicked(windowLength - 200, killcount.y, 250, killcount.height, CP_Input_GetMouseX(), CP_Input_GetMouseY())) {
+				current_level++;
+				CP_Engine_SetNextGameStateForced(Game_Init, Game_Update, Game_Exit);
+				level_complete = 0;
+			}
+		}
+		else {
+			if (IsAreaClicked(windowLength - 200, killcount.y, 250, killcount.height, CP_Input_GetMouseX(), CP_Input_GetMouseY())) {
+				current_level++;
+				GameMode = 2;
+				CP_Engine_SetNextGameStateForced(Game_Init, Game_Update, Game_Exit);
+			}
+		}
 	}
-	if (IsAreaClicked(windowLength - 200, killcount.y, 250, killcount.height, CP_Input_GetMouseX(), CP_Input_GetMouseY()) && current_level == 2) {
-		current_level++;
-		GameMode = 2;
-	}
+
+	//if (IsAreaClicked(windowLength - 200, killcount.y, 250, killcount.height, CP_Input_GetMouseX(), CP_Input_GetMouseY()) && current_level == 2) {
+	//	current_level++;
+	//	GameMode = 2;
+	//}
 
 	//if (CP_Input_KeyDown(KEY_Q)) {
 	//	current_level = 0;

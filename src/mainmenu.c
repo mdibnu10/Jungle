@@ -16,10 +16,10 @@
 #include "utils.h"
 
 CP_Font globalfont;
-CP_Image bg, digipen;
+static CP_Image bg, digipen;
 CP_Sound music;
 
-float timer = 0.0f;
+static float timer = 0.0f;
 int isShow = 1;
 
 int isquit;
@@ -75,8 +75,8 @@ MapData maps[LEVELS][MAPS_PER_LEVEL] =
 	{ {"./Assets/Maps/A2.png", "./Assets/Maps/A2obs.png", PigeonMoves, mapA2_x, mapA2_y, mapA2_w, mapA2_h, 14, 48, 48, 32, 32}, {"./Assets/Maps/B2.png", "./Assets/Maps/B2obs.png", SpiderMoves, mapB2_x, mapB2_y, mapB2_w, mapB2_h, 14, 130, 100, 130, 100},
 	{"./Assets/Maps/C2.png", "./Assets/Maps/C2obs.png", SpiderMoves, mapC2_x, mapC2_y, mapC2_w, mapC2_h, 12, 130, 100, 130, 100}},
 	// Level 3: same placeholders
-	{ {"./Assets/Maps/A1.png", "./Assets/Maps/A1obs.png", BearMoves, mapA1_x, mapA1_y, mapA1_w, mapA1_h, 14, 80, 80}, {"./Assets/Maps/B1.png", "./Assets/Maps/B1obs.png", BearMoves, mapB1_x, mapB1_y, mapB1_w, mapB1_h, 15, 80, 80},
-	{"./Assets/Maps/C1.png", "./Assets/Maps/C1obs.png", BearMoves, mapC1_x, mapC1_y, mapC1_w, mapC1_h, 12, 80, 80}},
+	{ {"./Assets/Maps/B2.png", "./Assets/Maps/B2obs.png", SpiderMoves, mapB2_x, mapB2_y, mapB2_w, mapB2_h, 14, 130, 100, 130, 100}, {"./Assets/Maps/C1.png", "./Assets/Maps/C1obs.png", PigeonMoves, mapC1_x, mapC1_y, mapC1_w, mapC1_h, 14, 48, 48, 32, 32},
+	{"./Assets/Maps/C2.png", "./Assets/Maps/C2obs.png", BearMoves, mapC2_x, mapC2_y, mapC2_w, mapC2_h, 12, 80, 80, 32, 32}},
 	// Boss level: only [0] is used
 	{ {"./Assets/Maps/bossmap.png", NULL, BearMoves, mapBoss_x, mapBoss_y, mapBoss_w, mapBoss_h, 4, 80, 80, 32, 32}, {0}, {0} },
 };
@@ -86,7 +86,7 @@ int current_level = 0;
 // randomize map for each level
 void randomize(void)
 {
-	for (int i = 0; i < LEVELS; i++)
+	for (int i = 0; i < 3; i++)
 		random_map[i] = rand() % MAPS_PER_LEVEL;
 }
 
