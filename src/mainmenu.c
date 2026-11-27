@@ -16,13 +16,13 @@
 #include "utils.h"
 
 CP_Font globalfont;
-static CP_Image bg, digipen;
+static CP_Image bg, digipen, team, credit;
 CP_Sound music;
 
 static float timer = 0.0f;
 int isShow = 1;
 
-int isquit;
+int isquit, iscredit;
 
 // first map level 1
 float mapA1_x[] = { 976.03125f, 736.1818f, 1343.875f, 1311.8182f, 271.875f, 432.2727f, 173.5f, 335.1818f, 655.9545f, 512.2727f, 1007.96875f, 813.0f, 1183.1818f, 190.2273f };
@@ -101,35 +101,50 @@ void Main_Menu_Init(void)
 	CP_Settings_ImageWrapMode(CP_IMAGE_WRAP_CLAMP);
 	CP_System_SetWindowSize(CP_Image_GetWidth(bg), CP_Image_GetHeight(bg));
 	music = CP_Sound_Load("./Assets/Audios/main menu music.wav");
+	team = CP_Image_Load("./Assets/grplogo.png");
+	CP_Settings_ImageMode(CP_POSITION_CORNER);
+	CP_Settings_ImageWrapMode(CP_IMAGE_WRAP_CLAMP);
+	credit = CP_Image_Load("./Assets/credit.png");
+	CP_Settings_ImageMode(CP_POSITION_CORNER);
+	CP_Settings_ImageWrapMode(CP_IMAGE_WRAP_CLAMP);
 
 	isquit = 0;
+	iscredit = 0;
 }
 
 void Main_Menu_Update(void)
 {
 	if (isShow) {
-		timer += CP_System_GetDt();
 		CP_Graphics_ClearBackground(CP_Color_Create(0, 0, 0, 255));
+		timer += CP_System_GetDt();
 		float fadeDuration = 0.5f;
-		float totalDuration = 2.0f;
+		float singleDuration = 2.0f; // Duration for ONE image
+		float totalDuration = 4.0f;  // Total duration for BOTH images
+
+		// Determine which image to draw and calculate its local 0.0 -> 2.0 timer
+		CP_Image currentImage = (timer < singleDuration) ? digipen : team;
+		float localTimer = (timer < singleDuration) ? timer : (timer - singleDuration);
+
 		int alpha = 255;
 
-		if (timer <= fadeDuration) // in the first 0.5 seconds
+		if (localTimer <= fadeDuration) // In the first 0.5 seconds of the current image
 		{
-			// Fade in: 0 -> 255 over the first 0.5 seconds
-			alpha = (int)((timer / fadeDuration) * 255.0f); // converting time into opacity
+			// Fade in: 0 -> 255
+			alpha = (int)((localTimer / fadeDuration) * 255.0f);
 		}
-		else if (timer >= (totalDuration - fadeDuration)) // in the last 0.5 seconds
+		else if (localTimer >= (singleDuration - fadeDuration)) // In the last 0.5 seconds
 		{
-			// Fade out: 255 -> 0 over the last 0.5 seconds
-			alpha = (int)(((totalDuration - timer) / fadeDuration) * 255.0f); // converting time into opacity
+			// Fade out: 255 -> 0
+			alpha = (int)(((singleDuration - localTimer) / fadeDuration) * 255.0f);
 		}
+
 		if (alpha < 0) alpha = 0;
 		if (alpha > 255) alpha = 255;
 
-		CP_Image_Draw(digipen, 30, 222, 1525, 425, alpha);
+		// Draw only the active image for the current 2-second window
+		CP_Image_Draw(currentImage, 0, 0, 1600, 900, alpha);
 
-		if (timer >= totalDuration) {
+		if (timer >= totalDuration || CP_Input_KeyTriggered(KEY_ENTER)) {
 			isShow = 0;
 			CP_Sound_PlayAdvanced(music, 0.3f, 1.0f, TRUE, CP_SOUND_GROUP_MUSIC);
 			CP_Graphics_ClearBackground(CP_Color_Create(30, 30, 30, 0));
@@ -172,7 +187,15 @@ void Main_Menu_Update(void)
 		CP_Engine_SetNextGameState(Game_Init, Game_Update, Game_Exit);
 	}
 
-	// add if statement for credits here (might need make new source file for the credits)
+	if (IsAreaClicked(area_center_x, cred_height, area_width, area_height, click_x, click_y)) {
+		iscredit = 1;	
+	}
+	if (iscredit) {
+		CP_Image_Draw(credit, 0, 0, 1600, 900, 255);
+		if (CP_Input_KeyTriggered(KEY_ESCAPE)) {
+			iscredit = 0;
+		}
+	}
 
 	if (IsAreaClicked(area_center_x, exit_height, area_width, area_height, click_x, click_y) || isquit) { // if exit is clicked
 		isquit = 1;

@@ -28,9 +28,7 @@ Bullet bullets[MAX_BULLETS];
 Bullet slashes[MAX_BULLETS];
 char text[100];
 CP_Font font_menu = NULL;
-int dummy_width;
-int dummy_height;
-int max_obs;
+int dummy_width, dummy_height, max_obs;
 float animTimer;
 Obstacle obstacle[MAX_OBSTACLE];
 
@@ -40,13 +38,9 @@ Obstacle obstacle[MAX_OBSTACLE];
 Timer timer;
 KillCount killcount;
 
-int lives = 3;
-int GAMEOVER = 0;
-int HPBARHEALTH;
-float hitTimer = 0.0f;
-int ClickedSlot = 1;
-int Paused = 0;
+int lives = 3, GAMEOVER = 0, HPBARHEALTH, ClickedSlot = 1, Paused = 0;
 int GameMode = 0; //0 = Time-Based, 1 = Kill-Based, 2 = Boss Fight
+float hitTimer = 0.0f;
 
 // ++ Darrell's Boost Spawn Variables +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -73,16 +67,20 @@ float KnightminX, KnightmaxX, KnightminY, KnightmaxY;
 float DummmyminX, DummymaxX, DummyminY, DummymaxY;
 float overlapX, overlapY;
 
+// weapons and sounds
 CP_Sound slash, bowarrow, player_damage, hp, igm, player_death;
-
 CP_Image bow, sword, potion;
 
 CP_Color black, white, red, yellow, green, orange, blue, grey;
 
 Boss boss;
 float boss2player_angle;
+
+// tutorial
 float tut_timer = 0.0f;
 int tut_showing = 1;
+int tut_stage = 0;
+CP_Image tutorial;
 
 char const* slotNum[] = {" ", "1", "2", "3" };
 
@@ -270,7 +268,6 @@ void Game_Init(void)
 	lives = 3; // Reset lives
 	if (GameMode == 2) Boss_Init(&boss);
 
-	// qusyairie -------------------------
 	// sound effects
 	bowarrow = CP_Sound_Load("./Assets/Audios/bow and arrow.wav"); // projectile sound effect
 	slash = CP_Sound_Load("./Assets/Audios/slashing.wav"); // sword attack sound
@@ -286,6 +283,9 @@ void Game_Init(void)
 	CP_Settings_ImageMode(CP_POSITION_CORNER);
 	CP_Settings_ImageWrapMode(CP_IMAGE_WRAP_CLAMP);
 
+	// tutorial
+	tutorial = CP_Image_Load("./Assets/tutorial1.png");
+
 	CP_Sound_PlayAdvanced(igm, 0.3f, 1.0f, TRUE, CP_SOUND_GROUP_MUSIC);
 }
 
@@ -298,37 +298,48 @@ void Game_Update(void)
 		tut_timer += CP_System_GetDt();
 		CP_Graphics_ClearBackground(black);
 		float fadeDuration = 1.0f;
-		float totalDuration = 30.0f;
+		float stageDuration = 30.0f;
 		int alpha = 255;
 
-		if (tut_timer <= fadeDuration) // in the first 0.5 seconds
-		{
-			// Fade in: 0 -> 255 over the first 0.5 seconds
-			alpha = (int)((tut_timer / fadeDuration) * 255.0f); // converting time into opacity
+		// 1. Calculate fade in / fade out alpha for the current 30s stage
+		if (tut_timer <= fadeDuration) {
+			alpha = (int)((tut_timer / fadeDuration) * 255.0f);
 		}
-		else if (tut_timer >= (totalDuration - fadeDuration)) // in the last 0.5 seconds
-		{
-			// Fade out: 255 -> 0 over the last 0.5 seconds
-			alpha = (int)(((totalDuration - tut_timer) / fadeDuration) * 255.0f); // converting time into opacity
+		else if (tut_timer >= (stageDuration - fadeDuration)) {
+			alpha = (int)(((stageDuration - tut_timer) / fadeDuration) * 255.0f);
 		}
 		if (alpha < 0) alpha = 0;
 		if (alpha > 255) alpha = 255;
 
-		CP_Settings_Fill(CP_Color_Create(255, 255, 255, alpha)); // setting font color
-		CP_Settings_TextSize(50);
-		CP_Settings_TextAlignment(CP_TEXT_ALIGN_H_CENTER, CP_TEXT_ALIGN_V_MIDDLE);
-		CP_Font_DrawText("RULES", windowLength/2, 100);
-		CP_Font_DrawText("YOU HAVE 3 LIVES", windowLength / 2, 200);
-		CP_Font_DrawText("REACH THE KILL COUNT OR SURVIVE THE CLOCK", windowLength / 2, 250);
-		CP_Font_DrawText("TO PROGRESS TO THE NEXT LEVEL", windowLength / 2, 300);
-		CP_Font_DrawText("CONTROLS", windowLength / 2, 450);
-		CP_Font_DrawText("WASD TO MOVE, LEFT CLICK TO USE ITEM", windowLength / 2, 550);
-		CP_Font_DrawText("BUFFS CAN BE COLLECTED THROUGHOUT THE GAME", windowLength / 2, 600);
-		CP_Font_DrawText("PRESS ENTER TO START, GOOD LUCK", windowLength / 2, 800);
+		// 2. Render based on the current stage
+		if (tut_stage == 0) {
+			// STAGE 0: Display only the tutorial image
+			CP_Settings_ImageMode(CP_POSITION_CORNER);
+			CP_Settings_ImageWrapMode(CP_IMAGE_WRAP_CLAMP);
+			CP_Image_Draw(tutorial, 0, 0, 1600, 900, alpha);
+		}
+		else if (tut_stage == 1) {
+			// STAGE 1: Display only the tutorial texts
+			CP_Settings_Fill(CP_Color_Create(255, 255, 255, alpha));
+			CP_Settings_TextSize(50);
+			CP_Settings_TextAlignment(CP_TEXT_ALIGN_H_CENTER, CP_TEXT_ALIGN_V_MIDDLE);
+			CP_Font_DrawText("EACH LEVEL'S GAME MODE IS RANDOMISED", windowLength / 2, 300);
+			CP_Font_DrawText("REACH THE KILL COUNT OR SURVIVE THE CLOCK", windowLength / 2, 350);
+			CP_Font_DrawText("DO NOT LOSE ALL 3 LIVES", windowLength / 2, 450);
+			CP_Font_DrawText("YOU WILL NEED IT AGAINST THE BOSS", windowLength / 2, 550);
+			CP_Font_DrawText("PRESS ENTER TO START, GOOD LUCK", windowLength / 2, 600);
+		}
 
-		if (tut_timer >= 30.0f || CP_Input_KeyTriggered(KEY_ENTER)) {
-			tut_showing = 0;
-			CP_Graphics_ClearBackground(grey);
+		// 3. Advance stage or exit after 30s or pressing Enter
+		if (tut_timer >= stageDuration || CP_Input_KeyTriggered(KEY_ENTER)) {
+			tut_timer = 0.0f; // Reset timer for the next stage
+			tut_stage++;      // Move to the next stage
+
+			if (tut_stage > 1) {
+				tut_showing = 0;
+				tut_stage = 0; // Reset stage in case tutorial is replayed later
+				CP_Graphics_ClearBackground(grey);
+			}
 		}
 		return;
 	}
@@ -457,7 +468,7 @@ void Game_Update(void)
 				{
 					if (IsSquareColliding2(dummy[i].x, dummy[i].y, dummy[i].width, dummy[i].height, melee.x, melee.y, melee.width, melee.height) && dummy[i].counter != 0 && Paused == 0 && GAMEOVER != 1)
 					{
-						dummy[i].counter -= 2;
+						dummy[i].counter -= 2 + DummyDmgTaken - 1;
 						if (dummy[i].counter < 0) dummy[i].counter = 0;
 					}
 
@@ -1604,8 +1615,6 @@ void Game_Update(void)
 		CP_Settings_Fill(red);
 		CP_Graphics_DrawRect(windowLength / 2 - 500, killcount.y - killcount.height / 2, 1000 * (boss.hp / boss.maxHp), killcount.height);
 		CP_Settings_RectMode(CP_POSITION_CENTER);
-
-
 	}
 }
 
