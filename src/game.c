@@ -38,7 +38,7 @@ Obstacle obstacle[MAX_OBSTACLE];
 Timer timer;
 KillCount killcount;
 
-int lives = 3, GAMEOVER = 0, HPBARHEALTH, ClickedSlot = 1, Paused = 0;
+int lives = 3, GAMEOVER = 0, GAMEWIN, HPBARHEALTH, ClickedSlot = 1, Paused = 0;
 int GameMode = 0; //0 = Time-Based, 1 = Kill-Based, 2 = Boss Fight
 float hitTimer = 0.0f;
 
@@ -71,7 +71,7 @@ float overlapX, overlapY;
 CP_Sound slash, bowarrow, player_damage, hp, igm, player_death;
 CP_Image bow, sword, potion;
 
-CP_Color black, white, red, yellow, green, orange, blue, grey;
+CP_Color black, white, red, yellow, green, orange, blue, grey, darkred;
 
 Boss boss;
 float boss2player_angle;
@@ -84,7 +84,7 @@ CP_Image tutorial;
 
 char const* slotNum[] = {" ", "1", "2", "3" };
 
-int level_complete = 0;
+int level_complete;
 //Used for potion
 int usedState = 0;
 float PotionCD = 0.0f;
@@ -102,9 +102,11 @@ void Game_Init(void)
 	orange = CP_Color_Create(255, 128, 0, 255);
 	blue = CP_Color_Create(0, 0, 255, 255);
 	grey = CP_Color_Create(130, 130, 130, 255);
+	darkred = CP_Color_Create(123, 14, 14, 255);
 
 	knight.x = 800.0f;
 	knight.y = 450.0f;
+	if (GameMode == 2) knight.x = 300.0f;
 	knight.speed = 210.0f;
 	knight.state = IDLE;
 	knight.width = 50;
@@ -116,6 +118,7 @@ void Game_Init(void)
 	melee.height = 120;
 	melee.state = 0;
 	melee.timer = 0.0f;
+	level_complete = 0;
 
 	//Reset when next game state
 	usedState = 0;
@@ -264,6 +267,7 @@ void Game_Init(void)
 	killcount.height = 70.0f;
 	killcount.total = 10;
 	killcount.amount = 0;
+	GAMEWIN = 0;
 	GAMEOVER = 0; // Reset game over state
 	lives = 3; // Reset lives
 	if (GameMode == 2) Boss_Init(&boss);
@@ -471,10 +475,9 @@ void Game_Update(void)
 						dummy[i].counter -= 2 + DummyDmgTaken - 1;
 						if (dummy[i].counter < 0) dummy[i].counter = 0;
 					}
-
-					if (GameMode == 2 && IsSquareColliding2(boss.x, boss.y, boss.width, boss.height, melee.x, melee.y, melee.width, melee.height))
-						Boss_TakeDamage(&boss, DummyDmgTaken);
 				}
+				if (GameMode == 2 && IsSquareColliding2(boss.x, boss.y, boss.width, boss.height, melee.x, melee.y, melee.width, melee.height))
+					Boss_TakeDamage(&boss, 20);
 			}
 			//----------------------------------------------------
 		}
@@ -803,11 +806,12 @@ void Game_Update(void)
 	// ============================================= BOSS CODES ============================================================== //
 	if (GameMode == 2)
 	{
-		if (Paused == 0 && GAMEOVER != 1)
+		if (Paused == 0 && GAMEOVER != 1 && GAMEWIN != 1)
 		{
 			Boss_Update(&boss, dt, knight.x, knight.y);
 		}
-			
+		if (boss.dead) GAMEWIN = 1;
+
 		CP_Graphics_DrawRect(boss.x, boss.y, boss.width, boss.height);
 		Boss_Draw(&boss);
 		VDP_X = knight.x - boss.x;
@@ -830,9 +834,10 @@ void Game_Update(void)
 			boss2player_angle >= 310 && boss2player_angle <= 320;
 		int touching = IsSquareColliding2(boss.x, boss.y, boss.width, boss.height,
 			knight.x, knight.y, knight.width, knight.height);
-		
+
 		if (boss.state != BOSS_ATTACK1 && boss.state != BOSS_ATTACK2 &&
-			boss.state != BOSS_ATTACK3 && boss.state != BOSS_ATTACK4 && boss.state != BOSS_ATTACK5)
+			boss.state != BOSS_ATTACK3 && boss.state != BOSS_ATTACK4 &&
+			boss.state != BOSS_ATTACK5 && boss.state != BOSS_DIE)
 		{
 			if (boss.attackCooldown <= 0) boss.has_hit = 0;
 			if (boss.attack2Cooldown > 0.0f) boss.attack2Cooldown -= dt;
@@ -882,97 +887,119 @@ void Game_Update(void)
 				boss.y += (NVDP_Y * boss.speed) * dt;
 			}
 		}
-	}
-	if (boss.state == BOSS_ATTACK5)
-	{
-		if (VDP_dist >= 100)
-		{
-			boss.x += (NVDP_X * boss.speed) * dt;
-			boss.y += (NVDP_Y * boss.speed) * dt;
-		}
-		else if (knight.iFrame == 0)
-		{
-			knight.iFrame = 1;
-			knight.iFrameTimer = 0.5f;
-			HPBARHEALTH -= 5.0f;
-			if (HPBARHEALTH < 0) HPBARHEALTH = 0;
-		}
-	}
-	if (BeamHitsKnight(&boss, knight.x, knight.y, knight.width, knight.height)
-		&& !boss.beam_hit)
-	{
-		boss.beam_hit = 1;
-		HPBARHEALTH -= 10.0f;
-		if (HPBARHEALTH < 0) HPBARHEALTH = 0;
 
-	}
-    
-	if (GameMode == 2 && boss.state == BOSS_ATTACK3 && boss.attack3.frame == 5 && boss.jumpHit == 0)
-	{
-		boss.jumpHit = 1;
-		if (VDP_dist < 100) {
+		if (boss.state == BOSS_ATTACK5)
+		{
+			if (VDP_dist >= 100)
+			{
+				boss.x += (NVDP_X * boss.speed) * dt;
+				boss.y += (NVDP_Y * boss.speed) * dt;
+			}
+			else if (knight.iFrame == 0)
+			{
+				knight.iFrame = 1;
+				knight.iFrameTimer = 0.5f;
+				HPBARHEALTH -= 5.0f;
+				if (HPBARHEALTH < 0) HPBARHEALTH = 0;
+			}
+		}
+		if (BeamHitsKnight(&boss, knight.x, knight.y, knight.width, knight.height)
+			&& !boss.beam_hit)
+		{
+			boss.beam_hit = 1;
 			HPBARHEALTH -= 10.0f;
 			if (HPBARHEALTH < 0) HPBARHEALTH = 0;
-		}
-	}
 
-	if (GameMode == 2 && boss.slash == 1)
-	{
-		boss.slash = 2; // means fired
-		for (int s = 0; s < MAX_BULLETS; s++)
-		{
-			if (slashes[s].state == 0)
-			{
-				slashes[s].x = boss.x;
-				slashes[s].y = boss.y;
-				slashes[s].speed_x = NVDP_X * 500.0f;
-				slashes[s].speed_y = NVDP_Y * 500.0f;
-				slashes[s].angle = CP_Math_Degrees(atan2f(NVDP_Y, NVDP_X));
-				slashes[s].size = 40.0f;
-				slashes[s].state = 1;
-				break;
-			}
-		}
-	}
-
-	for (int s = 0; s < MAX_BULLETS; s++)
-	{
-		if (slashes[s].state != 1) continue;
-
-		if (Paused == 0 && GAMEOVER != 1)
-		{
-			slashes[s].x += slashes[s].speed_x * dt;
-			slashes[s].y += slashes[s].speed_y * dt;
 		}
 
-		if (slashes[s].x < -50 || slashes[s].x > 1650 ||
-			slashes[s].y < -50 || slashes[s].y > 950)
+		if (boss.state == BOSS_ATTACK3 && boss.attack3.frame == 5 && boss.jumpHit == 0)
 		{
-			slashes[s].state = 0;
-			continue;
-		}
-
-		if (IsSquareColliding2(slashes[s].x, slashes[s].y, slashes[s].size, slashes[s].size,
-			knight.x, knight.y, knight.width, knight.height))
-		{
-			slashes[s].state = 0;
-			if (knight.iFrame == 0 && GAMEOVER != 1)
-			{
+			boss.jumpHit = 1;
+			if (VDP_dist < 100) {
 				HPBARHEALTH -= 10.0f;
 				if (HPBARHEALTH < 0) HPBARHEALTH = 0;
-				CP_Sound_Play(player_damage);
-				knight.iFrame = 1;
-				knight.iFrameTimer = 1.0f;
 			}
-			continue;
 		}
 
-		CP_Settings_RectMode(CP_POSITION_CENTER);
-		CP_Settings_Fill(CP_Color_Create(80, 160, 255, 220));
-		//CP_Graphics_DrawRectAdvanced(slashes[s].x, slashes[s].y, slashes[s].size * 1.5f, 12.0f, slashes[s].angle, 6.0f);
-		CP_Image_DrawAdvanced(slashimg, slashes[s].x, slashes[s].y, 128, 128, 255, slashes[s].angle);
-	}
+		if (boss.slash == 1)
+		{
+			boss.slash = 2; // means fired
+			for (int s = 0; s < MAX_BULLETS; s++)
+			{
+				if (slashes[s].state == 0)
+				{
+					slashes[s].x = boss.x;
+					slashes[s].y = boss.y;
+					slashes[s].speed_x = NVDP_X * 500.0f;
+					slashes[s].speed_y = NVDP_Y * 500.0f;
+					slashes[s].angle = CP_Math_Degrees(atan2f(NVDP_Y, NVDP_X));
+					slashes[s].size = 40.0f;
+					slashes[s].state = 1;
+					break;
+				}
+			}
+		}
 
+		for (int s = 0; s < MAX_BULLETS; s++)
+		{
+			if (slashes[s].state != 1) continue;
+
+			if (Paused == 0 && GAMEOVER != 1)
+			{
+				slashes[s].x += slashes[s].speed_x * dt;
+				slashes[s].y += slashes[s].speed_y * dt;
+			}
+
+			if (slashes[s].x < -50 || slashes[s].x > 1650 ||
+				slashes[s].y < -50 || slashes[s].y > 950)
+			{
+				slashes[s].state = 0;
+				continue;
+			}
+
+			if (IsSquareColliding2(slashes[s].x, slashes[s].y, slashes[s].size, slashes[s].size,
+				knight.x, knight.y, knight.width, knight.height))
+			{
+				slashes[s].state = 0;
+				if (knight.iFrame == 0 && GAMEOVER != 1)
+				{
+					HPBARHEALTH -= 10.0f;
+					if (HPBARHEALTH < 0) HPBARHEALTH = 0;
+					CP_Sound_Play(player_damage);
+					knight.iFrame = 1;
+					knight.iFrameTimer = 1.0f;
+				}
+				continue;
+			}
+
+			CP_Settings_RectMode(CP_POSITION_CENTER);
+			CP_Settings_Fill(CP_Color_Create(80, 160, 255, 220));
+			//CP_Graphics_DrawRectAdvanced(slashes[s].x, slashes[s].y, slashes[s].size * 1.5f, 12.0f, slashes[s].angle, 6.0f);
+			CP_Image_DrawAdvanced(slashimg, slashes[s].x, slashes[s].y, 128, 128, 255, slashes[s].angle);
+		}
+
+		if (GAMEWIN == 1)
+		{
+			Paused = 1;
+
+			CP_Settings_Fill(CP_Color_Create(0, 0, 0, 180));
+			CP_Settings_RectMode(CP_POSITION_CENTER);
+			CP_Graphics_DrawRect(windowLength / 2, windowHeight / 2, windowLength, windowHeight);
+
+			CP_Settings_Fill(white);
+			CP_Settings_TextAlignment(CP_TEXT_ALIGN_H_CENTER, CP_TEXT_ALIGN_V_MIDDLE);
+			CP_Settings_TextSize(100.0f);
+			CP_Font_DrawText("YOU WIN!", windowLength / 2.0f, windowHeight / 2.0f);
+
+			CP_Settings_TextSize(30.0f);
+			CP_Font_DrawText("PRESS ENTER TO CONTINUE", windowLength / 2.0f, windowHeight / 2.0f + 80);
+
+			if (CP_Input_KeyTriggered(KEY_ENTER))
+			{
+				CP_Engine_SetNextGameState(Main_Menu_Init, Main_Menu_Update, Main_Menu_Exit);
+			}
+		}
+	}
 	// ======================================================================================================== //
 	// Actuvate use state for current map
 	
@@ -1422,7 +1449,7 @@ void Game_Update(void)
 		}
 	}
 
-	if (Paused == 1 && GAMEOVER == 0)
+	if (Paused == 1 && GAMEOVER == 0 && GAMEWIN == 0)
 	{
 		// drawing grey overlay
 		CP_Settings_Fill(CP_Color_Create(130, 130, 130, 100));
@@ -1612,6 +1639,8 @@ void Game_Update(void)
 
 		// boss health bar
 		CP_Settings_RectMode(CP_POSITION_CORNER);
+		CP_Settings_Fill(darkred);
+		CP_Graphics_DrawRect(windowLength / 2 - 500, killcount.y - killcount.height / 2, 1000, killcount.height);
 		CP_Settings_Fill(red);
 		CP_Graphics_DrawRect(windowLength / 2 - 500, killcount.y - killcount.height / 2, 1000 * (boss.hp / boss.maxHp), killcount.height);
 		CP_Settings_RectMode(CP_POSITION_CENTER);

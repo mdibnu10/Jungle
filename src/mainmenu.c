@@ -114,6 +114,12 @@ void Main_Menu_Init(void)
 
 void Main_Menu_Update(void)
 {
+	if (GAMEWIN == 1 && !iscredit)
+	{
+		isShow = 0;
+		iscredit = 1;
+		CP_Sound_PlayAdvanced(music, 0.3f, 1.0f, TRUE, CP_SOUND_GROUP_MUSIC);
+	}
 	if (isShow) {
 		CP_Graphics_ClearBackground(CP_Color_Create(0, 0, 0, 255));
 		timer += CP_System_GetDt();
@@ -182,6 +188,7 @@ void Main_Menu_Update(void)
 	CP_Font_DrawText("Digipen Institute of Technology Singapore", 300, 15);
 
 	if (IsAreaClicked(area_center_x, play_height, area_width, area_height, click_x, click_y) && isquit != 1) { // if play is clicked
+		current_level = 0;
 		randomize();
 		CP_Sound_StopAll();
 		CP_Engine_SetNextGameState(Game_Init, Game_Update, Game_Exit);
@@ -194,6 +201,7 @@ void Main_Menu_Update(void)
 		CP_Image_Draw(credit, 0, 0, 1600, 900, 255);
 		if (CP_Input_KeyTriggered(KEY_ESCAPE)) {
 			iscredit = 0;
+			GAMEWIN = 0;
 		}
 	}
 

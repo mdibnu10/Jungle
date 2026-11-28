@@ -180,7 +180,7 @@ void Anim_Free(Animation* anim)
 
 void Boss_Init(Boss* b)
 {
-	b->x = 450.0f;  b->y = 100.0f;
+	b->x = 1300.0f;  b->y = 450.0f;
 	b->width = 150.0f;  b->height = 120.0f;
 	b->draw_w = 180.0f; b->draw_h = 180.0f;
 	b->speed = 180.0f;
@@ -198,7 +198,10 @@ void Boss_Init(Boss* b)
 	b->attack3Cooldown = 0.0f;
 	b->attack4Cooldown = 5.0f;
 	b->attack5Cooldown = 5.0f;
+	b->dead = 0;
+	b->dying = 2.0f;
 	b->beamdir = CP_Image_Load("Assets/Characters/Boss/finaldirections.png");
+	b->hpBar_img = CP_Image_Load("Assets/Characters/Boss/Boss_Face.png");
 	Anim_Init(&b->idle, "Assets/Characters/Boss/Boss_Idle.png", 180, 180, 0.12f, 1);
 	Anim_Init(&b->run, "Assets/Characters/Boss/Boss_Run.png", 180, 180, 0.12f, 1);
 	Anim_Init(&b->attack, "Assets/Characters/Boss/Boss_Attack.png", 180, 180, 0.10f, 0);
@@ -207,12 +210,11 @@ void Boss_Init(Boss* b)
 	Anim_Init(&b->attack4, "Assets/Characters/Boss/Boss_Attack4.png", 180, 180, 0.10f, 0);
 	Anim_Init(&b->attack5, "Assets/Characters/Boss/Boss_Attack5.png", 180, 180, 0.05f, 1);
 	Anim_Init(&b->beam, "Assets/Characters/Boss/Boss_Beam.png", 96, 96, 0.15f, 0);
+	Anim_Init(&b->die, "Assets/Characters/Boss/Boss_Dead.png", 180, 180, 0.15f, 0);
 }
 
 void Boss_Update(Boss* b, float dt, float knightX, float knightY)
 {
-	if (b->state == BOSS_DEAD) return;
-
 	b->is_right = knightX > b->x;
 
 	switch (b->state) {
@@ -270,7 +272,7 @@ void Boss_Update(Boss* b, float dt, float knightX, float knightY)
 		b->hold_frame -= 0;
 		if (Anim_Update(&b->beam, dt))
 		{
-			b->state = IDLE;
+			b->state = BOSS_IDLE;
 			b->attack4Cooldown = 5.0f;
 			b->hold_frame = 3.0f;
 			Anim_Reset(&b->attack4);
@@ -288,13 +290,21 @@ void Boss_Update(Boss* b, float dt, float knightX, float knightY)
 			b->state = BOSS_CHASE;
 		}
 		break;
+	case BOSS_DIE:
+		Anim_Update(&b->die, dt);
+		if (b->die.frame >= b->die.frame_count - 1)
+		{
+			b->dying -= dt;
+			if (b->dying <= 0.0f) b->dead = 1;
+		}
+		break;
 	default: break;
 	}
 }
 
 void Boss_Draw(Boss* b)
 {
-	if (b->state == BOSS_DEAD) return;
+	CP_Image_Draw(b->hpBar_img, 270, 50, 58, 68, 255);
 	float w = b->is_right ? b->draw_w : -b->draw_w;
 	switch (b->state) {
 	case BOSS_IDLE:
@@ -343,6 +353,9 @@ void Boss_Draw(Boss* b)
 		break;
 	case BOSS_ATTACK5:
 		Anim_Draw(&b->attack5, b->x, b->y, 360, 360);
+		break;
+	case BOSS_DIE:
+		Anim_Draw(&b->die, b->x, b->y, 180, 180);
 		break;
 
 	default: break;
@@ -450,9 +463,9 @@ int BeamHitsKnight(const Boss* boss, float kx, float ky,
 }
 void Boss_TakeDamage(Boss* b, float dmg)
 {
-	if (b->state == BOSS_DEAD) return;
+	if (b->state == BOSS_DIE) return;
 	b->hp -= dmg;
-	if (b->hp <= 0.0f) { b->hp = 0.0f; b->state = BOSS_DEAD; }
+	if (b->hp <= 0.0f) { b->hp = 0.0f; b->state = BOSS_DIE;}
 }
 
 void Boss_Free(Boss* b)

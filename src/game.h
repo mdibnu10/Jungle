@@ -112,3 +112,4 @@ typedef struct {
 extern int random_map[LEVELS];
 extern int current_level;
 extern MapData maps[LEVELS][MAPS_PER_LEVEL];
+extern int GAMEWIN;
